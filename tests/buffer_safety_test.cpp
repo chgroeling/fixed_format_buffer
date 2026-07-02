@@ -188,3 +188,48 @@ TEST(BufferSafety, Reuse_ToEmpty_NullTerminatorAtZero) {
     EXPECT_TRUE(buf.Empty());
     EXPECT_EQ(buf.View().data()[0], '\0');
 }
+
+// ---------------------------------------------------------------------------
+// Null terminator at exactly position N (buffer filled to capacity)
+//
+// buffer_ has N+1 slots; when exactly N chars are written, g.pos == N and
+// the terminator goes into buffer_[N] — the last (reserved) slot.
+// ---------------------------------------------------------------------------
+
+TEST(BufferSafety, ExactFill_String_NullTerminatorAtN) {
+    FixedFormatBuffer<5> buf;
+    buf.Format("%s", "hello");            // exactly 5 chars = N
+    EXPECT_EQ(buf.Size(), 5u);
+    EXPECT_EQ(buf.View(), "hello");
+    EXPECT_EQ(buf.View().data()[5], '\0'); // buffer_[N] must be '\0'
+}
+
+TEST(BufferSafety, ExactFill_Int_NullTerminatorAtN) {
+    FixedFormatBuffer<3> buf;
+    buf.Format("%i", 42);                 // "42" = 2 chars < 3; use 999 → 3 chars
+    // First verify 2-char case (sanity)
+    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+
+    buf.Format("%i", 999);               // exactly 3 chars = N
+    EXPECT_EQ(buf.Size(), 3u);
+    EXPECT_EQ(buf.View(), "999");
+    EXPECT_EQ(buf.View().data()[3], '\0');
+}
+
+TEST(BufferSafety, ExactFill_Float_NullTerminatorAtN) {
+    // "1.50" = 4 chars; use FixedFormatBuffer<4>
+    FixedFormatBuffer<4> buf;
+    buf.Format("%.2f", 1.5f);            // exactly 4 chars = N
+    EXPECT_EQ(buf.Size(), 4u);
+    EXPECT_EQ(buf.View(), "1.50");
+    EXPECT_EQ(buf.View().data()[4], '\0');
+}
+
+TEST(BufferSafety, ExactFill_AfterShorterWrite_NullTerminatorAtN) {
+    FixedFormatBuffer<5> buf;
+    buf.Format("%s", "hi");              // size=2, buffer[2]='\0'
+    buf.Format("%s", "hello");           // size=5=N, buffer[5] must be '\0'
+    EXPECT_EQ(buf.Size(), 5u);
+    EXPECT_EQ(buf.View(), "hello");
+    EXPECT_EQ(buf.View().data()[5], '\0');
+}
