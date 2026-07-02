@@ -34,6 +34,7 @@ public:
     /// Supported syntax: @c %[flags][width][.precision][length]specifier
     ///
     /// Supported specifiers:
+    ///   - @c %c  — single character (@c char)
     ///   - @c %s  — null-terminated string (@c const @c char*)
     ///   - @c %d, @c %i  — signed decimal integer
     ///   - @c %f  — decimal float; only when @c Policy::kSupportFloatingPointDecimals is true.
@@ -316,6 +317,18 @@ private:
             }
 
             switch (*fmt) {
+                case 'c': {
+                    // char promotes to int in variadic calls.
+                    const char c{static_cast<char>(va_arg(args, int))};
+                    if (width > 0U) {
+                        if (!flags.left_justify) EmitPadding(g, width, 1U);
+                        g.Put(c);
+                        if ( flags.left_justify) EmitPadding(g, width, 1U);
+                    } else {
+                        g.Put(c);
+                    }
+                    break;
+                }
                 case 's': {
                     const char* s{va_arg(args, const char*)};
                     if (width > 0U) {
