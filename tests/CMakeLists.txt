@@ -5,6 +5,7 @@ find_package(GTest REQUIRED)
 add_executable(fixed_format_buffer_tests
     fixed_format_buffer_test.cpp
     buffer_policy_test.cpp
+    buffer_safety_test.cpp
     sprintf_comparison_test.cpp
 )
 target_link_libraries(fixed_format_buffer_tests PRIVATE

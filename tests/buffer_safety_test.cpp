@@ -1,0 +1,142 @@
+#include "ffb/fixed_format_buffer.h"
+
+#include <climits>
+#include <cstring>
+#include <string_view>
+
+#include <gtest/gtest.h>
+
+using ffb::FixedFormatBuffer;
+
+// ---------------------------------------------------------------------------
+// Helper: a FixedFormatBuffer wrapped between two sentinel regions.
+//
+// Layout (no padding inserted by the compiler between members because
+// FixedFormatBuffer contains only char[] and size_t, both naturally
+// aligned; the sentinel arrays are char so they have alignment 1):
+//
+//   [ before_sentinel | FixedFormatBuffer<N> | after_sentinel ]
+//
+// Any write that escapes the buffer_ array and crosses the object
+// boundary will corrupt one of the sentinels and be caught by
+// CheckSentinels().
+// ---------------------------------------------------------------------------
+template <std::size_t N>
+struct Guarded {
+    static constexpr uint8_t kFill = 0xCC;
+
+    uint8_t              before[16];
+    FixedFormatBuffer<N> buf;
+    uint8_t              after[16];
+
+    Guarded() {
+        std::memset(before, kFill, sizeof(before));
+        std::memset(after,  kFill, sizeof(after));
+    }
+
+    void CheckSentinels() const {
+        for (std::size_t i = 0U; i < sizeof(before); ++i)
+            EXPECT_EQ(before[i], kFill) << "before-sentinel corrupted at index " << i;
+        for (std::size_t i = 0U; i < sizeof(after); ++i)
+            EXPECT_EQ(after[i],  kFill) << "after-sentinel corrupted at index " << i;
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Observable safety invariants after an overflowing Format call
+// ---------------------------------------------------------------------------
+
+TEST(BufferSafety, SizeNeverExceedsCapacity) {
+    FixedFormatBuffer<4> buf;
+    buf.Format("%s", "hello world");  // 11 chars > capacity 4
+    EXPECT_LE(buf.Size(), buf.CAPACITY);
+}
+
+TEST(BufferSafety, ViewSizeMatchesSize) {
+    FixedFormatBuffer<4> buf;
+    buf.Format("%s", "hello");
+    EXPECT_EQ(buf.View().size(), buf.Size());
+}
+
+TEST(BufferSafety, NullTerminatorAlwaysPresent) {
+    // buffer_ has N+1 chars; buffer_[Size()] must always be '\0'.
+    FixedFormatBuffer<4> buf;
+    buf.Format("%s", "hello world");
+    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+}
+
+TEST(BufferSafety, ContentIsCorrectPrefix) {
+    FixedFormatBuffer<4> buf;
+    buf.Format("%s", "hello");
+    EXPECT_EQ(buf.View(), "hell");
+    EXPECT_EQ(buf.Size(), 4u);
+}
+
+TEST(BufferSafety, NullTerminatorPresentAfterExactFit) {
+    FixedFormatBuffer<5> buf;
+    buf.Format("%s", "hello");  // exactly 5 chars = capacity
+    EXPECT_EQ(buf.View(), "hello");
+    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+}
+
+TEST(BufferSafety, NullTerminatorPresentAfterShortWrite) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "hi");
+    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+}
+
+// ---------------------------------------------------------------------------
+// Integer overflow scenarios
+// ---------------------------------------------------------------------------
+
+TEST(BufferSafety, IntOverflow_SizeInvariant) {
+    FixedFormatBuffer<3> buf;
+    buf.Format("%i", -2147483648);  // "-2147483648" = 11 chars > 3
+    EXPECT_LE(buf.Size(), buf.CAPACITY);
+    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+}
+
+// ---------------------------------------------------------------------------
+// Float overflow scenarios
+// ---------------------------------------------------------------------------
+
+TEST(BufferSafety, FloatOverflow_SizeInvariant) {
+    FixedFormatBuffer<3> buf;
+    buf.Format("%f", 3.14f);  // "3.140000" = 8 chars > 3
+    EXPECT_LE(buf.Size(), buf.CAPACITY);
+    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+}
+
+// ---------------------------------------------------------------------------
+// Sentinel tests — detect writes past the FixedFormatBuffer object boundary
+// ---------------------------------------------------------------------------
+
+TEST(BufferSafety, Sentinel_StringOverflow) {
+    Guarded<4> g;
+    g.buf.Format("%s", "hello world");
+    g.CheckSentinels();
+    EXPECT_LE(g.buf.Size(), 4u);
+}
+
+TEST(BufferSafety, Sentinel_IntOverflow) {
+    Guarded<3> g;
+    g.buf.Format("%i", -2147483648);
+    g.CheckSentinels();
+    EXPECT_LE(g.buf.Size(), 3u);
+}
+
+TEST(BufferSafety, Sentinel_FloatOverflow) {
+    Guarded<3> g;
+    g.buf.Format("%f", 3.14f);
+    g.CheckSentinels();
+    EXPECT_LE(g.buf.Size(), 3u);
+}
+
+TEST(BufferSafety, Sentinel_MultipleFormats) {
+    Guarded<4> g;
+    for (int i = 0; i < 100; ++i) {
+        g.buf.Format("%i", i * 1000);
+    }
+    g.CheckSentinels();
+    EXPECT_LE(g.buf.Size(), 4u);
+}
