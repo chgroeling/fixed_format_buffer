@@ -19,10 +19,10 @@ namespace ffb {
 /// @par Type aliases
 /// - `IntType`   — the type read from the va_list for @c %i / @c %d.
 ///                 Must be a type that survives default argument promotion
-///                 (i.e. not narrower than @c int). Default: @c int.
+///                 (i.e. not narrower than @c int). Default: @c int32_t.
 /// - `UIntType`  — the type read from the va_list for @c %x / @c %u.
 ///                 Must be an unsigned type surviving default argument promotion.
-///                 Default: @c unsigned @c int.
+///                 Default: @c uint32_t.
 /// - `FloatType` — the internal floating-point type used by the formatter
 ///                 for @c %f processing. Default: @c float.
 ///
@@ -54,11 +54,11 @@ struct AllFeatures {
 
     /// Type read from the va_list for the @c %i / @c %d specifier.
     /// Must be at least as wide as @c int (no implicit narrowing via va_arg).
-    using IntType = int;
+    using IntType = int32_t;
 
     /// Type read from the va_list for the @c %x / @c %u specifiers.
     /// Must be an unsigned type surviving default argument promotion.
-    using UIntType = unsigned int;
+    using UIntType = uint32_t;
 
     /// Internal floating-point type used for @c %f decomposition.
     /// va_arg always promotes to @c double; the value is cast to this type
@@ -75,6 +75,13 @@ struct AllFeatures {
 /// @tparam N      Maximum number of characters (excluding null terminator).
 /// @tparam Policy Feature-flag policy struct.
 ///                Defaults to AllFeatures (all features enabled).
+///
+/// @warning The formatter reads exactly the number of bits specified by
+///          the policy's type aliases via @c va_arg. Passing a value wider
+///          than the policy type (e.g. a 64-bit integer to a 32-bit policy)
+///          silently truncates to the lower bits. Use a custom policy with
+///          matching type aliases (e.g. IntType = int64_t) to handle wider
+///          values correctly.
 template <std::size_t N, typename Policy = AllFeatures>
 class FixedFormatBuffer {
 public:
