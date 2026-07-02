@@ -321,3 +321,11 @@ TEST(BufferSafety, FloatLongerThanBuffer_OnlySignSurvives) {
     EXPECT_EQ(buf.View(), "-");
     EXPECT_EQ(buf.View().data()[1], '\0');
 }
+
+TEST(BufferSafety, FloatLongerThanBuffer_NothingFits) {
+    FixedFormatBuffer<0> buf;
+    buf.Format("%.2f", -3.14f);  // no room at all; buffer_[0] must be '\0'
+    EXPECT_EQ(buf.Size(), 0u);
+    EXPECT_EQ(buf.View(), "");
+    EXPECT_EQ(buf.View().data()[0], '\0');
+}
