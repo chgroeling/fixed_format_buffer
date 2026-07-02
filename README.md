@@ -1,3 +1,63 @@
 # fixed_format_buffer
 
-Allocation-free fixed-capacity formatting buffer for embedded C++. Usable on the stack, as a class member, or statically allocated. Formatted string views are transient and valid only until the buffer is modified, reused, or destroyed.
+Allocation-free fixed-capacity formatting buffer for embedded C++.
+
+No heap, no exceptions, no recursion — suitable for bare-metal and RTOS
+environments where `malloc` is unavailable or forbidden. The buffer lives
+on the stack, as a class member, or in static memory.
+
+Formatted string views are transient and valid only until the buffer is
+modified, reused, or destroyed.
+
+## Features
+
+- Subset of `printf`-style formatting: `%c` `%s` `%d` `%i` `%u` `%x` `%f`
+- Flags: `-` (left-justify), `+` (show sign), `0` (zero-pad)
+- Width and precision for `%f`
+- Configurable integer and unsigned types via policy template parameter
+- Header-only — single `#include "ffb/fixed_format_buffer.h"`
+- C++17
+
+## Quick start
+
+```cpp
+#include "ffb/fixed_format_buffer.h"
+
+ffb::FixedFormatBuffer<64> buf;               // 64-char capacity on the stack
+
+buf.Format("sensor=%d, temp=%.2f C", 7, 23.5f);
+std::string_view result{buf.View()};          // "sensor=7, temp=23.50 C"
+
+buf.Format("%08x", 0xCAFEU);                  // zero-padded hex → "0000cafe"
+buf.Format("%+d", 42);                        // show sign → "+42"
+```
+
+## Custom policy types
+
+The default policy uses `int32_t` / `uint32_t`. For 64-bit values,
+define a custom policy:
+
+```cpp
+struct Int64Policy {
+    static constexpr bool        kSupportFloatingPointDecimals = true;
+    static constexpr std::size_t kDefaultFloatPrecision        = 6U;
+    using IntType   = int64_t;
+    using UIntType  = uint64_t;
+    using FloatType = float;
+};
+
+ffb::FixedFormatBuffer<32, Int64Policy> buf;
+buf.Format("%u", UINT64_C(18446744073709551615));
+// → "18446744073709551615"
+```
+
+## Building
+
+Requires CMake 3.15+, a C++17 compiler, and GoogleTest.
+
+```sh
+conan install . --build=missing
+cmake --preset conan-debug
+cmake --build --preset conan-debug
+ctest --preset conan-debug
+```
