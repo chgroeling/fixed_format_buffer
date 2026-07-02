@@ -303,3 +303,43 @@ TEST(FixedFormatBuffer, LeftJustifyShowSign_Float_Negative) {
     buf.Format("%-+12.3f", -3.14f);
     EXPECT_EQ(buf.View(), "-3.140      ");
 }
+
+// ---------------------------------------------------------------------------
+// Format — %c (character)
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, FormatChar_Basic) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%c", 'A');
+    EXPECT_EQ(buf.View(), "A");
+}
+
+TEST(FixedFormatBuffer, FormatChar_Special) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%c", '!');
+    EXPECT_EQ(buf.View(), "!");
+}
+
+TEST(FixedFormatBuffer, FormatChar_InSentence) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("x=%c y=%c", 'A', 'B');
+    EXPECT_EQ(buf.View(), "x=A y=B");
+}
+
+TEST(FixedFormatBuffer, FormatChar_Width_RightJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%5c", 'X');
+    EXPECT_EQ(buf.View(), "    X");
+}
+
+TEST(FixedFormatBuffer, FormatChar_Width_LeftJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-5c", 'X');
+    EXPECT_EQ(buf.View(), "X    ");
+}
+
+TEST(FixedFormatBuffer, FormatChar_Width_ExactFit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%1c", 'Z');
+    EXPECT_EQ(buf.View(), "Z");
+}
