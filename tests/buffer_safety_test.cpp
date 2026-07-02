@@ -140,3 +140,51 @@ TEST(BufferSafety, Sentinel_MultipleFormats) {
     g.CheckSentinels();
     EXPECT_LE(g.buf.Size(), 4u);
 }
+
+// ---------------------------------------------------------------------------
+// Null terminator placement on reuse (second Format over previous content)
+// ---------------------------------------------------------------------------
+
+// Long → short: null terminator must move to the new (shorter) position.
+TEST(BufferSafety, Reuse_LongToShort_NullTerminatorCorrect) {
+    FixedFormatBuffer<16> buf;
+    buf.Format("%s", "hello");            // size=5, buffer[5]='\0'
+    buf.Format("%s", "hi");               // size=2, buffer[2] must be '\0'
+
+    EXPECT_EQ(buf.Size(), 2u);
+    EXPECT_EQ(buf.View(), "hi");
+    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+}
+
+// Short → long (fits): null terminator moves forward.
+TEST(BufferSafety, Reuse_ShortToLong_NullTerminatorCorrect) {
+    FixedFormatBuffer<16> buf;
+    buf.Format("%s", "hi");               // size=2, buffer[2]='\0'
+    buf.Format("%s", "hello");            // size=5, buffer[5] must be '\0'
+
+    EXPECT_EQ(buf.Size(), 5u);
+    EXPECT_EQ(buf.View(), "hello");
+    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+}
+
+// Long → truncated: null terminator lands exactly at CAPACITY.
+TEST(BufferSafety, Reuse_LongToTruncated_NullTerminatorAtCapacity) {
+    FixedFormatBuffer<4> buf;
+    buf.Format("%s", "hi");               // size=2, buffer[2]='\0'
+    buf.Format("%s", "hello world");      // truncated to 4, buffer[4] must be '\0'
+
+    EXPECT_EQ(buf.Size(), 4u);
+    EXPECT_EQ(buf.View(), "hell");
+    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+}
+
+// Any → empty: null terminator must be at position 0.
+TEST(BufferSafety, Reuse_ToEmpty_NullTerminatorAtZero) {
+    FixedFormatBuffer<16> buf;
+    buf.Format("%s", "hello");
+    buf.Format("%s", "");                 // size=0, buffer[0] must be '\0'
+
+    EXPECT_EQ(buf.Size(), 0u);
+    EXPECT_TRUE(buf.Empty());
+    EXPECT_EQ(buf.View().data()[0], '\0');
+}
