@@ -39,9 +39,10 @@ public:
     ///   - @c %f  — decimal float; only when @c Policy::kSupportFloatingPointDecimals is true.
     ///             Optional precision: @c %.Nf  (default: @c Policy::kDefaultFloatPrecision).
     ///
-    /// @note Flags (@c - @c + @c   @c 0 @c #), width, and length modifiers
+    /// @note Flags (@c - @c + @c   @c 0 @c #) and length modifiers
     ///       (@c h @c hh @c l @c ll @c j @c z @c t @c L) are parsed and silently
-    ///       ignored — they do not affect output. Only @c .precision is acted upon.
+    ///       ignored — they do not affect output.
+    ///       Width produces right-aligned, space-padded output.
     ///
     /// Truncates silently if the result exceeds capacity.
     /// @return Number of characters written (excluding null terminator).
@@ -98,6 +99,19 @@ private:
     // -------------------------------------------------------------------------
     // Low-level writers
     // -------------------------------------------------------------------------
+
+    /// Emit `width - content_len` space characters (right-align padding).
+    /// No-op when content already meets or exceeds the width.
+    static void EmitPadding(Gadget& g, std::size_t width, std::size_t content_len) noexcept {
+        while (content_len < width) { g.Put(' '); ++content_len; }
+    }
+
+    /// A gadget that counts characters without writing them.
+    /// Used to measure content length before emitting padding.
+    static Gadget MakeCountingGadget() noexcept {
+        // max_chars == 0 ensures Put() never dereferences buf.
+        return Gadget{nullptr, 0U, 0U};
+    }
 
     static void WriteRaw(Gadget& g, const char* s, std::size_t len) noexcept {
         for (std::size_t i = 0U; i < len; ++i) g.Put(s[i]);
@@ -250,12 +264,14 @@ private:
                 ++fmt;
             }
 
-            // --- Width (ignored, but consumed) ---
+            // --- Width (right-align with space padding) ---
             // First digit must be 1-9 (distinguishes width from flag '0'),
             // subsequent digits may include 0.
+            std::size_t width = 0U;
             if (*fmt >= '1' && *fmt <= '9') {
-                ++fmt;
-                while (*fmt >= '0' && *fmt <= '9') ++fmt;
+                width = static_cast<std::size_t>(*fmt++ - '0');
+                while (*fmt >= '0' && *fmt <= '9')
+                    width = width * 10U + static_cast<std::size_t>(*fmt++ - '0');
             }
 
             // --- Precision (.digits, e.g. "%.2f") ---
@@ -283,13 +299,27 @@ private:
             }
 
             switch (*fmt) {
-                case 's':
-                    WriteString(g, va_arg(args, const char*));
+                case 's': {
+                    const char* s = va_arg(args, const char*);
+                    if (width > 0U) {
+                        Gadget dry = MakeCountingGadget();
+                        WriteString(dry, s);
+                        EmitPadding(g, width, dry.pos);
+                    }
+                    WriteString(g, s);
                     break;
+                }
                 case 'd':
-                case 'i':
-                    WriteInt(g, static_cast<int64_t>(va_arg(args, IntType)));
+                case 'i': {
+                    const int64_t v = static_cast<int64_t>(va_arg(args, IntType));
+                    if (width > 0U) {
+                        Gadget dry = MakeCountingGadget();
+                        WriteInt(dry, v);
+                        EmitPadding(g, width, dry.pos);
+                    }
+                    WriteInt(g, v);
                     break;
+                }
                 case 'f': {
                     // Variadic args promote float→double; cast back to FloatType
                     // for policy-controlled precision.
@@ -297,6 +327,11 @@ private:
                     // but only format it when the policy permits.
                     const FloatType v = static_cast<FloatType>(va_arg(args, double));
                     if constexpr (Policy::kSupportFloatingPointDecimals) {
+                        if (width > 0U) {
+                            Gadget dry = MakeCountingGadget();
+                            WriteFloat(dry, v, precision);
+                            EmitPadding(g, width, dry.pos);
+                        }
                         WriteFloat(g, v, precision);
                     }
                     break;
