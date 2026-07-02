@@ -29,7 +29,9 @@ namespace ffb {
 ///   };
 /// @endcode
 struct AllFeatures {
-    /// Enable formatting of floating-point arguments.
+    /// When @c true, the @c %f specifier formats floating-point decimals.
+    /// When @c false, @c %f is silently consumed from the argument list
+    /// but produces no output, and all float formatting code is compiled away.
     static constexpr bool kSupportFloatingPointDecimals = true;
 
     /// Type read from the va_list for the @c %i / @c %d specifier.
