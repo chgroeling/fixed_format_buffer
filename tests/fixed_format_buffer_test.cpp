@@ -153,3 +153,61 @@ TEST(FixedFormatBuffer, ClearResetsBuffer) {
     EXPECT_EQ(buf.Size(), 0u);
     EXPECT_EQ(buf.View(), "");
 }
+
+// ---------------------------------------------------------------------------
+// Format — width (right-align, space-padded)
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, Width_Int_WiderThanContent) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%6d", 42);
+    EXPECT_EQ(buf.View(), "    42");
+}
+
+TEST(FixedFormatBuffer, Width_Int_ExactFit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%2d", 42);
+    EXPECT_EQ(buf.View(), "42");
+}
+
+TEST(FixedFormatBuffer, Width_Int_NarrowerThanContent) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%2d", 12345);
+    EXPECT_EQ(buf.View(), "12345"); // no truncation from width
+}
+
+TEST(FixedFormatBuffer, Width_Int_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%6d", -7);
+    EXPECT_EQ(buf.View(), "    -7");
+}
+
+TEST(FixedFormatBuffer, Width_Float_WiderThanContent) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%12.2f", 3.14f);
+    EXPECT_EQ(buf.View(), "        3.14");
+}
+
+TEST(FixedFormatBuffer, Width_Float_ExactFit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%4.2f", 3.14f);
+    EXPECT_EQ(buf.View(), "3.14");
+}
+
+TEST(FixedFormatBuffer, Width_Float_NarrowerThanContent) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%3.2f", 3.14f);
+    EXPECT_EQ(buf.View(), "3.14"); // no truncation from width
+}
+
+TEST(FixedFormatBuffer, Width_Float_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%8.2f", -1.5f);
+    EXPECT_EQ(buf.View(), "   -1.50");
+}
+
+TEST(FixedFormatBuffer, Width_Int_MultiDigitWidth) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%10d", 99);
+    EXPECT_EQ(buf.View(), "        99");
+}
