@@ -5,6 +5,7 @@
 #include <cstdarg>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <string_view>
 
 #include "ffb/buffer_policy.h"
@@ -66,6 +67,12 @@ public:
 
 private:
     // -------------------------------------------------------------------------
+    // Policy-derived type aliases (used throughout the private implementation)
+    // -------------------------------------------------------------------------
+    using IntType   = typename Policy::IntType;
+    using FloatType = typename Policy::FloatType;
+
+    // -------------------------------------------------------------------------
     // Output gadget
     //
     // Wraps the destination buffer. pos always increments even past max_chars,
@@ -107,15 +114,13 @@ private:
         while (len) g.Put(tmp[--len]); // reverse
     }
 
-    static void WriteInt(Gadget& g, int32_t value) noexcept {
+    static void WriteInt(Gadget& g, int64_t value) noexcept {
         if (value < 0) {
             g.Put('-');
-            // Negate via unsigned arithmetic to avoid UB on INT_MIN.
-            WriteUnsigned(g, static_cast<uint64_t>(
-                static_cast<uint32_t>(-(value + 1)) + 1U));
+            // Negate via unsigned arithmetic to avoid UB on INT64_MIN.
+            WriteUnsigned(g, static_cast<uint64_t>(-(value + 1)) + 1ULL);
         } else {
-            WriteUnsigned(g, static_cast<uint64_t>(
-                static_cast<uint32_t>(value)));
+            WriteUnsigned(g, static_cast<uint64_t>(value));
         }
     }
 
@@ -123,8 +128,9 @@ private:
     static constexpr std::size_t kMaxFloatPrecision     = 6U;
 
     /// Powers of 10 indexed by precision (0 .. kMaxFloatPrecision).
-    static constexpr float kPow10Table[] = {
-        1.0f, 10.0f, 100.0f, 1000.0f, 10000.0f, 100000.0f, 1000000.0f
+    static constexpr FloatType kPow10Table[] = {
+        FloatType(1), FloatType(10), FloatType(100), FloatType(1000),
+        FloatType(10000), FloatType(100000), FloatType(1000000)
     };
 
     /// Integral and fractional decimal components of a floating-point value.
@@ -141,18 +147,18 @@ private:
     ///   precision loss on large integrals.
     /// - Applies banker's rounding (round-half-to-even).
     /// - Handles carry-over when the fractional part rounds up to 10^precision.
-    static FloatComponents GetComponents(float value, std::size_t precision) noexcept {
+    static FloatComponents GetComponents(FloatType value, std::size_t precision) noexcept {
         FloatComponents c;
-        c.is_negative = value < 0.0f;
-        float abs_val = c.is_negative ? -value : value;
+        c.is_negative = value < FloatType(0);
+        FloatType abs_val = c.is_negative ? -value : value;
 
         c.integral = static_cast<int64_t>(abs_val);
-        float scaled_remainder = (abs_val - static_cast<float>(c.integral))
-                                  * kPow10Table[precision];
+        FloatType scaled_remainder = (abs_val - static_cast<FloatType>(c.integral))
+                                     * kPow10Table[precision];
         c.fractional = static_cast<int64_t>(scaled_remainder);
 
-        float remainder = scaled_remainder - static_cast<float>(c.fractional);
-        constexpr float kHalf = 0.5f;
+        FloatType remainder = scaled_remainder - static_cast<FloatType>(c.fractional);
+        constexpr FloatType kHalf = FloatType(0.5);
 
         // Banker's rounding: round up if remainder > 0.5, or if == 0.5 and
         // the fractional part is odd (round-half-to-even).
@@ -162,7 +168,7 @@ private:
         }
 
         // Carry: fractional rounded up to 10^precision → propagate to integral.
-        if (static_cast<float>(c.fractional) >= kPow10Table[precision]) {
+        if (static_cast<FloatType>(c.fractional) >= kPow10Table[precision]) {
             c.fractional = 0;
             ++c.integral;
         }
@@ -171,7 +177,7 @@ private:
         // banker's rounding above never fires for the half-way case.
         // Re-apply it directly on the integral part.
         if (precision == 0U) {
-            remainder = abs_val - static_cast<float>(c.integral);
+            remainder = abs_val - static_cast<FloatType>(c.integral);
             if (remainder == kHalf && (c.integral & 1)) {
                 ++c.integral;
             }
@@ -180,20 +186,20 @@ private:
         return c;
     }
 
-    // Largest float whose truncation to int64_t is defined behaviour.
-    // static_cast<float>(INT64_MAX) rounds up to 2^63, so any abs_val >= this
-    // value would overflow the int64_t cast inside GetComponents (UB).
-    static constexpr float kMaxSafeIntegral = static_cast<float>(INT64_MAX);
+    // Largest FloatType value whose truncation to int64_t is defined behaviour.
+    // cast<FloatType>(INT64_MAX) rounds up to 2^63; anything >= that overflows.
+    static constexpr FloatType kMaxSafeIntegral = static_cast<FloatType>(INT64_MAX);
 
-    static void WriteFloat(Gadget& g, float value, std::size_t precision) noexcept {
-        if (value != value)   { WriteRaw(g, "nan",  3U); return; } // NaN
-        if (value >  FLT_MAX) { WriteRaw(g, "inf",  3U); return; } // +inf
-        if (value < -FLT_MAX) { WriteRaw(g, "-inf", 4U); return; } // -inf
+    static void WriteFloat(Gadget& g, FloatType value, std::size_t precision) noexcept {
+        constexpr FloatType kFloatMax = std::numeric_limits<FloatType>::max();
+        if (value != value)    { WriteRaw(g, "nan",  3U); return; } // NaN
+        if (value >  kFloatMax){ WriteRaw(g, "inf",  3U); return; } // +inf
+        if (value < -kFloatMax){ WriteRaw(g, "-inf", 4U); return; } // -inf
 
         // Guard: abs value >= 2^63 would overflow int64_t in GetComponents.
-        const float abs_val = value < 0.0f ? -value : value;
+        const FloatType abs_val = value < FloatType(0) ? -value : value;
         if (abs_val >= kMaxSafeIntegral) {
-            if (value < 0.0f) g.Put('-');
+            if (value < FloatType(0)) g.Put('-');
             WriteRaw(g, "ovf", 3U);
             return;
         }
@@ -253,14 +259,14 @@ private:
                     break;
                 case 'd':
                 case 'i':
-                    WriteInt(g, va_arg(args, int32_t));
+                    WriteInt(g, static_cast<int64_t>(va_arg(args, IntType)));
                     break;
                 case 'f': {
-                    // float promotes to double in variadic calls; cast back to float
-                    // for single-precision internal processing.
+                    // Variadic args promote float→double; cast back to FloatType
+                    // for policy-controlled precision.
                     // Always consume the argument to keep va_list aligned,
                     // but only format it when the policy permits.
-                    const float v = static_cast<float>(va_arg(args, double));
+                    const FloatType v = static_cast<FloatType>(va_arg(args, double));
                     if constexpr (Policy::kFloatSupport) {
                         WriteFloat(g, v, precision);
                     }
