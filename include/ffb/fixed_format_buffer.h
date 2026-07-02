@@ -90,6 +90,37 @@ public:
 
     FixedFormatBuffer() noexcept { buffer_[0] = '\0'; }
 
+    /// Copy constructor (same N and Policy).
+    FixedFormatBuffer(const FixedFormatBuffer& other) noexcept
+        : buffer_{other.buffer_}, size_{other.size_} {}
+
+    /// Copy assignment (same N and Policy).
+    FixedFormatBuffer& operator=(const FixedFormatBuffer& other) noexcept {
+        if (this != &other) {
+            buffer_ = other.buffer_;
+            size_   = other.size_;
+        }
+        return *this;
+    }
+
+    /// Move constructor (same N and Policy).
+    FixedFormatBuffer(FixedFormatBuffer&& other) noexcept
+        : buffer_{std::move(other.buffer_)}, size_{other.size_} {
+        other.size_ = 0;
+        other.buffer_[0] = '\0';
+    }
+
+    /// Move assignment (same N and Policy).
+    FixedFormatBuffer& operator=(FixedFormatBuffer&& other) noexcept {
+        if (this != &other) {
+            buffer_ = std::move(other.buffer_);
+            size_   = other.size_;
+            other.size_ = 0;
+            other.buffer_[0] = '\0';
+        }
+        return *this;
+    }
+
     /// Format into the buffer using a subset of printf-style specifiers.
     ///
     /// Supported syntax: @c %[flags][width][.precision][length]specifier

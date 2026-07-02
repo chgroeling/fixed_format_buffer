@@ -155,6 +155,33 @@ TEST(FixedFormatBuffer, ClearResetsBuffer) {
 }
 
 // ---------------------------------------------------------------------------
+// Copy / assignment
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, CopyConstructor) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "hello");
+    FixedFormatBuffer<64> copy{buf};
+    EXPECT_EQ(copy.View(), "hello");
+    EXPECT_EQ(copy.Size(), 5u);
+    // Modifying the original does not affect the copy
+    buf.Format("%s", "world");
+    EXPECT_EQ(copy.View(), "hello");
+}
+
+TEST(FixedFormatBuffer, CopyAssignment) {
+    FixedFormatBuffer<64> buf1;
+    FixedFormatBuffer<64> buf2;
+    buf1.Format("%s", "first");
+    buf2.Format("%s", "second");
+    buf2 = buf1;
+    EXPECT_EQ(buf2.View(), "first");
+    // Self-assignment safe
+    buf2 = buf2;
+    EXPECT_EQ(buf2.View(), "first");
+}
+
+// ---------------------------------------------------------------------------
 // Format — width (right-align, space-padded)
 // ---------------------------------------------------------------------------
 
