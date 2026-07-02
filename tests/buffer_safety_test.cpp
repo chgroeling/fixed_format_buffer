@@ -233,3 +233,75 @@ TEST(BufferSafety, ExactFill_AfterShorterWrite_NullTerminatorAtN) {
     EXPECT_EQ(buf.View(), "hello");
     EXPECT_EQ(buf.View().data()[5], '\0');
 }
+
+// ---------------------------------------------------------------------------
+// Integer longer than buffer — truncation and null terminator at buffer_[N]
+// ---------------------------------------------------------------------------
+
+TEST(BufferSafety, IntLongerThanBuffer_PositiveOverflow) {
+    FixedFormatBuffer<3> buf;
+    buf.Format("%i", 12345);     // "12345" = 5 chars > 3
+    EXPECT_EQ(buf.Size(), 3u);
+    EXPECT_EQ(buf.View(), "123");
+    EXPECT_EQ(buf.View().data()[3], '\0');
+}
+
+TEST(BufferSafety, IntLongerThanBuffer_NegativeOverflow) {
+    FixedFormatBuffer<3> buf;
+    buf.Format("%i", -1234);     // "-1234" = 5 chars > 3
+    EXPECT_EQ(buf.Size(), 3u);
+    EXPECT_EQ(buf.View(), "-12");
+    EXPECT_EQ(buf.View().data()[3], '\0');
+}
+
+TEST(BufferSafety, IntLongerThanBuffer_OnlySignFits) {
+    FixedFormatBuffer<1> buf;
+    buf.Format("%i", -99);       // "-99" = 3 chars; only '-' fits
+    EXPECT_EQ(buf.Size(), 1u);
+    EXPECT_EQ(buf.View(), "-");
+    EXPECT_EQ(buf.View().data()[1], '\0');
+}
+
+TEST(BufferSafety, IntLongerThanBuffer_NothingFits) {
+    FixedFormatBuffer<0> buf;
+    buf.Format("%i", 42);        // no room at all; buffer_[0] must be '\0'
+    EXPECT_EQ(buf.Size(), 0u);
+    EXPECT_EQ(buf.View(), "");
+    EXPECT_EQ(buf.View().data()[0], '\0');
+}
+
+// ---------------------------------------------------------------------------
+// Float longer than buffer — truncation and null terminator at buffer_[N]
+// ---------------------------------------------------------------------------
+
+TEST(BufferSafety, FloatLongerThanBuffer_TruncatesDigits) {
+    FixedFormatBuffer<3> buf;
+    buf.Format("%.2f", 3.14f);   // "3.14" = 4 chars > 3
+    EXPECT_EQ(buf.Size(), 3u);
+    EXPECT_EQ(buf.View(), "3.1");
+    EXPECT_EQ(buf.View().data()[3], '\0');
+}
+
+TEST(BufferSafety, FloatLongerThanBuffer_TruncatesAfterDecimalPoint) {
+    FixedFormatBuffer<2> buf;
+    buf.Format("%.2f", 3.14f);   // "3.14" = 4 chars; only "3." fits
+    EXPECT_EQ(buf.Size(), 2u);
+    EXPECT_EQ(buf.View(), "3.");
+    EXPECT_EQ(buf.View().data()[2], '\0');
+}
+
+TEST(BufferSafety, FloatLongerThanBuffer_TruncatesBeforeDecimalPoint) {
+    FixedFormatBuffer<1> buf;
+    buf.Format("%.2f", 3.14f);   // only "3" fits
+    EXPECT_EQ(buf.Size(), 1u);
+    EXPECT_EQ(buf.View(), "3");
+    EXPECT_EQ(buf.View().data()[1], '\0');
+}
+
+TEST(BufferSafety, FloatLongerThanBuffer_NegativeSign) {
+    FixedFormatBuffer<3> buf;
+    buf.Format("%.2f", -3.14f);  // "-3.14" = 5 chars > 3
+    EXPECT_EQ(buf.Size(), 3u);
+    EXPECT_EQ(buf.View(), "-3.");
+    EXPECT_EQ(buf.View().data()[3], '\0');
+}
