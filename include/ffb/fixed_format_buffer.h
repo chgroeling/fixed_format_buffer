@@ -2,9 +2,7 @@
 
 #include <array>
 #include <cstddef>
-#include <cstdio>
 #include <string_view>
-#include <type_traits>
 
 #include "ffb/buffer_policy.h"
 
@@ -27,29 +25,6 @@ public:
 
     FixedFormatBuffer() noexcept { buffer_[0] = '\0'; }
 
-    /// Write a plain string into the buffer (no format expansion).
-    /// Truncates silently if the result exceeds capacity.
-    /// @return Number of characters written (excluding null terminator).
-    std::size_t Format(const char* str) noexcept {
-        return FormatImpl("%s", str);
-    }
-
-    /// Format a string into the buffer using printf-style format specifiers.
-    /// Truncates silently if the result exceeds capacity.
-    /// @return Number of characters written (excluding null terminator).
-    /// @note Passing a floating-point argument when Policy::kFloatSupport is false
-    ///       is a compile-time error.
-    template <typename Arg, typename... Args>
-    std::size_t Format(const char* fmt, Arg&& arg, Args&&... args) noexcept {
-        if constexpr (!Policy::kFloatSupport) {
-            static_assert(
-                !std::disjunction_v<std::is_floating_point<std::decay_t<Arg>>,
-                                    std::is_floating_point<std::decay_t<Args>>...>,
-                "Float formatting is disabled by the active policy (kFloatSupport = false)");
-        }
-        return FormatImpl(fmt, std::forward<Arg>(arg), std::forward<Args>(args)...);
-    }
-
     /// Clear the buffer contents.
     void Clear() noexcept {
         buffer_[0] = '\0';
@@ -69,18 +44,6 @@ public:
     [[nodiscard]] bool Empty() const noexcept { return size_ == 0; }
 
 private:
-    template <typename... Args>
-    std::size_t FormatImpl(const char* fmt, Args&&... args) noexcept {
-        int written = std::snprintf(buffer_.data(), buffer_.size(), fmt, std::forward<Args>(args)...);
-        if (written < 0) {
-            buffer_[0] = '\0';
-            size_ = 0;
-        } else {
-            size_ = static_cast<std::size_t>(written) < N ? static_cast<std::size_t>(written) : N;
-        }
-        return size_;
-    }
-
     std::array<char, N + 1> buffer_{};
     std::size_t size_{0};
 };
