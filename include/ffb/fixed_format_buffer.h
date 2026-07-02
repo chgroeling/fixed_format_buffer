@@ -4,6 +4,9 @@
 #include <cstddef>
 #include <cstdio>
 #include <string_view>
+#include <type_traits>
+
+#include "ffb/buffer_policy.h"
 
 namespace ffb {
 
@@ -13,8 +16,10 @@ namespace ffb {
 /// Formatted string views are transient and valid only until the buffer
 /// is modified, reused, or destroyed.
 ///
-/// @tparam N Maximum number of characters (excluding null terminator).
-template <std::size_t N>
+/// @tparam N      Maximum number of characters (excluding null terminator).
+/// @tparam Policy Feature-flag policy struct (see buffer_policy.h).
+///                Defaults to AllFeatures (all features enabled).
+template <std::size_t N, typename Policy = AllFeatures>
 class FixedFormatBuffer {
 public:
     /// Maximum number of characters the buffer can hold (excluding null terminator).
@@ -32,8 +37,16 @@ public:
     /// Format a string into the buffer using printf-style format specifiers.
     /// Truncates silently if the result exceeds capacity.
     /// @return Number of characters written (excluding null terminator).
+    /// @note Passing a floating-point argument when Policy::kFloatSupport is false
+    ///       is a compile-time error.
     template <typename Arg, typename... Args>
     std::size_t Format(const char* fmt, Arg&& arg, Args&&... args) noexcept {
+        if constexpr (!Policy::kFloatSupport) {
+            static_assert(
+                !std::disjunction_v<std::is_floating_point<std::decay_t<Arg>>,
+                                    std::is_floating_point<std::decay_t<Args>>...>,
+                "Float formatting is disabled by the active policy (kFloatSupport = false)");
+        }
         return FormatImpl(fmt, std::forward<Arg>(arg), std::forward<Args>(args)...);
     }
 
