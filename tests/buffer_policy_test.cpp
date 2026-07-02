@@ -1,4 +1,3 @@
-#include "ffb/buffer_policy.h"
 #include "ffb/fixed_format_buffer.h"
 
 #include <gtest/gtest.h>
