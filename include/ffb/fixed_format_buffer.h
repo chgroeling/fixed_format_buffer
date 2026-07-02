@@ -134,11 +134,11 @@ private:
         while (len) g.Put(tmp[--len]); // reverse
     }
 
-    static void WriteInt(Gadget& g, int64_t value) noexcept {
-        if (value < 0) {
+    static void WriteInt(Gadget& g, IntType value) noexcept {
+        if (value < IntType(0)) {
             g.Put('-');
-            // Negate via unsigned arithmetic to avoid UB on INT64_MIN.
-            WriteUnsigned(g, static_cast<uint64_t>(-(value + 1)) + 1ULL);
+            // Negate via uint64_t arithmetic to avoid UB on IntType's minimum value.
+            WriteUnsigned(g, static_cast<uint64_t>(-(static_cast<int64_t>(value) + 1)) + 1ULL);
         } else {
             WriteUnsigned(g, static_cast<uint64_t>(value));
         }
@@ -314,10 +314,10 @@ private:
                     const IntType v = va_arg(args, IntType);
                     if (width > 0U) {
                         Gadget dry = MakeCountingGadget();
-                        WriteInt(dry, static_cast<int64_t>(v));
+                        WriteInt(dry, v);
                         EmitPadding(g, width, dry.pos);
                     }
-                    WriteInt(g, static_cast<int64_t>(v));
+                    WriteInt(g, v);
                     break;
                 }
                 case 'f': {
