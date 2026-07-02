@@ -180,10 +180,23 @@ private:
         return c;
     }
 
+    // Largest float whose truncation to int64_t is defined behaviour.
+    // static_cast<float>(INT64_MAX) rounds up to 2^63, so any abs_val >= this
+    // value would overflow the int64_t cast inside GetComponents (UB).
+    static constexpr float kMaxSafeIntegral = static_cast<float>(INT64_MAX);
+
     static void WriteFloat(Gadget& g, float value, std::size_t precision) noexcept {
         if (value != value)   { WriteRaw(g, "nan",  3U); return; } // NaN
         if (value >  FLT_MAX) { WriteRaw(g, "inf",  3U); return; } // +inf
         if (value < -FLT_MAX) { WriteRaw(g, "-inf", 4U); return; } // -inf
+
+        // Guard: abs value >= 2^63 would overflow int64_t in GetComponents.
+        const float abs_val = value < 0.0f ? -value : value;
+        if (abs_val >= kMaxSafeIntegral) {
+            if (value < 0.0f) g.Put('-');
+            WriteRaw(g, "ovf", 3U);
+            return;
+        }
 
         if (precision > kMaxFloatPrecision) precision = kMaxFloatPrecision;
 
