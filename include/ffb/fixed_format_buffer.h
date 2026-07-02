@@ -127,33 +127,77 @@ private:
         1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0
     };
 
-    /// Decompose a non-negative finite double into decimal and write it.
+    /// Integral and fractional decimal components of a floating-point value.
+    struct FloatComponents {
+        int64_t integral;
+        int64_t fractional;
+        bool    is_negative;
+    };
+
+    /// Decompose a finite double into integral and fractional decimal components.
     ///
-    /// The algorithm: multiply the value by 10^precision, add 0.5 for
-    /// rounding, then split the result into integral and fractional parts
-    /// using integer division — no math library required.
+    /// Ported from the get_components() algorithm in eyalroz/printf (MIT):
+    /// - Splits integral and fractional parts before scaling to avoid
+    ///   precision loss on large integrals.
+    /// - Applies banker's rounding (round-half-to-even).
+    /// - Handles carry-over when the fractional part rounds up to 10^precision.
+    static FloatComponents GetComponents(double value, std::size_t precision) noexcept {
+        FloatComponents c;
+        c.is_negative = value < 0.0;
+        double abs_val = c.is_negative ? -value : value;
+
+        c.integral = static_cast<int64_t>(abs_val);
+        double scaled_remainder = (abs_val - static_cast<double>(c.integral))
+                                  * kPow10Table[precision];
+        c.fractional = static_cast<int64_t>(scaled_remainder);
+
+        double remainder = scaled_remainder - static_cast<double>(c.fractional);
+        constexpr double kHalf = 0.5;
+
+        // Banker's rounding: round up if remainder > 0.5, or if == 0.5 and
+        // the fractional part is odd (round-half-to-even).
+        if (remainder > kHalf ||
+            (remainder == kHalf && (c.fractional & 1))) {
+            ++c.fractional;
+        }
+
+        // Carry: fractional rounded up to 10^precision → propagate to integral.
+        if (static_cast<double>(c.fractional) >= kPow10Table[precision]) {
+            c.fractional = 0;
+            ++c.integral;
+        }
+
+        // For precision == 0 the fractional is always 0 (even), so the
+        // banker's rounding above never fires for the half-way case.
+        // Re-apply it directly on the integral part.
+        if (precision == 0U) {
+            remainder = abs_val - static_cast<double>(c.integral);
+            if (remainder == kHalf && (c.integral & 1)) {
+                ++c.integral;
+            }
+        }
+
+        return c;
+    }
+
     static void WriteFloat(Gadget& g, double value, std::size_t precision) noexcept {
         if (value != value)   { WriteRaw(g, "nan",  3U); return; } // NaN
         if (value >  DBL_MAX) { WriteRaw(g, "inf",  3U); return; } // +inf
         if (value < -DBL_MAX) { WriteRaw(g, "-inf", 4U); return; } // -inf
 
-        if (value < 0.0) { g.Put('-'); value = -value; }
         if (precision > kMaxFloatPrecision) precision = kMaxFloatPrecision;
 
-        const double    scale      = kPow10Table[precision];
-        const uint64_t  as_uint    = static_cast<uint64_t>(value * scale + 0.5);
-        const uint64_t  divisor    = static_cast<uint64_t>(scale);
-        const uint64_t  integral   = as_uint / divisor;
-        const uint64_t  fractional = as_uint % divisor;
+        const FloatComponents c = GetComponents(value, precision);
 
-        WriteUnsigned(g, integral);
+        if (c.is_negative) g.Put('-');
+        WriteUnsigned(g, static_cast<uint64_t>(c.integral));
 
         if (precision > 0U) {
             g.Put('.');
-            // Build fractional digits right-to-left, then emit left-to-right
+            // Build fractional digits right-to-left, emit left-to-right
             // so leading zeros are preserved.
             char frac[kMaxFloatPrecision];
-            uint64_t tmp = fractional;
+            uint64_t tmp = static_cast<uint64_t>(c.fractional);
             for (std::size_t i = precision; i > 0U; --i) {
                 frac[i - 1U] = static_cast<char>('0' + tmp % 10U);
                 tmp /= 10U;

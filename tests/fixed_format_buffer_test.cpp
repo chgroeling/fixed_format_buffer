@@ -79,7 +79,15 @@ TEST(FixedFormatBuffer, FormatFloat_CustomPrecision) {
 TEST(FixedFormatBuffer, FormatFloat_ZeroPrecision) {
     FixedFormatBuffer<64> buf;
     buf.Format("%.0f", 2.7);
-    EXPECT_EQ(buf.View(), "3");
+    EXPECT_EQ(buf.View(), "3");  // > 0.5, rounds up
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.0f", 2.5);
+    EXPECT_EQ(buf.View(), "2");  // round-half-to-even: 2 is even
+    buf.Format("%.0f", 1.5);
+    EXPECT_EQ(buf.View(), "2");  // round-half-to-even: 2 is even
 }
 
 TEST(FixedFormatBuffer, FormatFloat_Negative) {
