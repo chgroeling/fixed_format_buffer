@@ -123,8 +123,8 @@ private:
     static constexpr std::size_t kMaxFloatPrecision     = 6U;
 
     /// Powers of 10 indexed by precision (0 .. kMaxFloatPrecision).
-    static constexpr double kPow10Table[] = {
-        1.0, 10.0, 100.0, 1000.0, 10000.0, 100000.0, 1000000.0
+    static constexpr float kPow10Table[] = {
+        1.0f, 10.0f, 100.0f, 1000.0f, 10000.0f, 100000.0f, 1000000.0f
     };
 
     /// Integral and fractional decimal components of a floating-point value.
@@ -134,25 +134,25 @@ private:
         bool    is_negative;
     };
 
-    /// Decompose a finite double into integral and fractional decimal components.
+    /// Decompose a finite float into integral and fractional decimal components.
     ///
     /// Ported from the get_components() algorithm in eyalroz/printf (MIT):
     /// - Splits integral and fractional parts before scaling to avoid
     ///   precision loss on large integrals.
     /// - Applies banker's rounding (round-half-to-even).
     /// - Handles carry-over when the fractional part rounds up to 10^precision.
-    static FloatComponents GetComponents(double value, std::size_t precision) noexcept {
+    static FloatComponents GetComponents(float value, std::size_t precision) noexcept {
         FloatComponents c;
-        c.is_negative = value < 0.0;
-        double abs_val = c.is_negative ? -value : value;
+        c.is_negative = value < 0.0f;
+        float abs_val = c.is_negative ? -value : value;
 
         c.integral = static_cast<int64_t>(abs_val);
-        double scaled_remainder = (abs_val - static_cast<double>(c.integral))
+        float scaled_remainder = (abs_val - static_cast<float>(c.integral))
                                   * kPow10Table[precision];
         c.fractional = static_cast<int64_t>(scaled_remainder);
 
-        double remainder = scaled_remainder - static_cast<double>(c.fractional);
-        constexpr double kHalf = 0.5;
+        float remainder = scaled_remainder - static_cast<float>(c.fractional);
+        constexpr float kHalf = 0.5f;
 
         // Banker's rounding: round up if remainder > 0.5, or if == 0.5 and
         // the fractional part is odd (round-half-to-even).
@@ -162,7 +162,7 @@ private:
         }
 
         // Carry: fractional rounded up to 10^precision → propagate to integral.
-        if (static_cast<double>(c.fractional) >= kPow10Table[precision]) {
+        if (static_cast<float>(c.fractional) >= kPow10Table[precision]) {
             c.fractional = 0;
             ++c.integral;
         }
@@ -171,7 +171,7 @@ private:
         // banker's rounding above never fires for the half-way case.
         // Re-apply it directly on the integral part.
         if (precision == 0U) {
-            remainder = abs_val - static_cast<double>(c.integral);
+            remainder = abs_val - static_cast<float>(c.integral);
             if (remainder == kHalf && (c.integral & 1)) {
                 ++c.integral;
             }
@@ -180,10 +180,10 @@ private:
         return c;
     }
 
-    static void WriteFloat(Gadget& g, double value, std::size_t precision) noexcept {
+    static void WriteFloat(Gadget& g, float value, std::size_t precision) noexcept {
         if (value != value)   { WriteRaw(g, "nan",  3U); return; } // NaN
-        if (value >  DBL_MAX) { WriteRaw(g, "inf",  3U); return; } // +inf
-        if (value < -DBL_MAX) { WriteRaw(g, "-inf", 4U); return; } // -inf
+        if (value >  FLT_MAX) { WriteRaw(g, "inf",  3U); return; } // +inf
+        if (value < -FLT_MAX) { WriteRaw(g, "-inf", 4U); return; } // -inf
 
         if (precision > kMaxFloatPrecision) precision = kMaxFloatPrecision;
 
@@ -237,9 +237,11 @@ private:
                     WriteInt(g, va_arg(args, int32_t));
                     break;
                 case 'f': {
+                    // float promotes to double in variadic calls; cast back to float
+                    // for single-precision internal processing.
                     // Always consume the argument to keep va_list aligned,
                     // but only format it when the policy permits.
-                    const double v = va_arg(args, double);
+                    const float v = static_cast<float>(va_arg(args, double));
                     if constexpr (Policy::kFloatSupport) {
                         WriteFloat(g, v, precision);
                     }
