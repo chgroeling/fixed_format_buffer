@@ -224,8 +224,14 @@ private:
             if (*fmt == '.') {
                 ++fmt;
                 precision = 0U;
-                while (*fmt >= '0' && *fmt <= '9')
+                while (*fmt >= '0' && *fmt <= '9') {
                     precision = precision * 10U + static_cast<std::size_t>(*fmt++ - '0');
+                    if (precision > kMaxFloatPrecision) {
+                        precision = kMaxFloatPrecision;
+                        while (*fmt >= '0' && *fmt <= '9') ++fmt; // drain remaining digits
+                        break;
+                    }
+                }
             }
 
             switch (*fmt) {
