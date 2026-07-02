@@ -30,7 +30,9 @@ buf.View();  // → "sensor=7, temp=23.50 C"
 
 // View() returns a string_view into the buffer. It is invalidated
 // by the next Format() call, Clear(), or when the buffer goes out of scope.
-// Copy the string_view if you need to keep the value:
+// For a null-terminated C string, use data() on the string_view:
+
+puts(buf.View().data());                      // null-terminated, no copy
 
 std::string snapshot{buf.View()};             // copy before overwriting
 
