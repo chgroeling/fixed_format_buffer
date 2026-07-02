@@ -34,7 +34,7 @@ public:
     /// Supported specifiers:
     ///   - @c %s  — null-terminated string (@c const @c char*)
     ///   - @c %d, @c %i  — signed decimal integer (@c int)
-    ///   - @c %f  — decimal float (@c double); only when @c Policy::kFloatSupport is true.
+    ///   - @c %f  — decimal float (@c double); only when @c Policy::kSupportFloatingPointDecimals is true.
     ///             Optional precision: @c %.Nf  (default: 6 digits).
     ///
     /// Truncates silently if the result exceeds capacity.
@@ -267,7 +267,7 @@ private:
                     // Always consume the argument to keep va_list aligned,
                     // but only format it when the policy permits.
                     const FloatType v = static_cast<FloatType>(va_arg(args, double));
-                    if constexpr (Policy::kFloatSupport) {
+                    if constexpr (Policy::kSupportFloatingPointDecimals) {
                         WriteFloat(g, v, precision);
                     }
                     break;

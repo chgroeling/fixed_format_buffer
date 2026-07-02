@@ -8,7 +8,7 @@ using ffb::FixedFormatBuffer;
 
 // Local policy for tests — float disabled.
 struct NoFloat {
-    static constexpr bool kFloatSupport = false;
+    static constexpr bool kSupportFloatingPointDecimals = false;
     using IntType   = int;
     using FloatType = float;
 };

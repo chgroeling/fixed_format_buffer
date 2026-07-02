@@ -16,21 +16,21 @@ namespace ffb {
 ///                 for @c %f processing. Default: @c float.
 ///
 /// @par Feature flags
-/// - `kFloatSupport` — enables @c %f formatting. When @c false the specifier
+/// - `kSupportFloatingPointDecimals` — enables @c %f formatting. When @c false the specifier
 ///                     is silently consumed but produces no output.
 ///
 /// @par Extending the policy
 /// Derive or define a new struct overriding only what you need:
 /// @code
 ///   struct Int64Policy {
-///       static constexpr bool kFloatSupport = true;
+///       static constexpr bool kSupportFloatingPointDecimals = true;
 ///       using IntType   = long long;  // accept 64-bit integers via %i/%d
 ///       using FloatType = float;
 ///   };
 /// @endcode
 struct AllFeatures {
     /// Enable formatting of floating-point arguments.
-    static constexpr bool kFloatSupport = true;
+    static constexpr bool kSupportFloatingPointDecimals = true;
 
     /// Type read from the va_list for the @c %i / @c %d specifier.
     /// Must be at least as wide as @c int (no implicit narrowing via va_arg).
