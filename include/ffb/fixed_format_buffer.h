@@ -37,14 +37,17 @@ public:
     ///   - @c %c  — single character (@c char)
     ///   - @c %s  — null-terminated string (@c const @c char*)
     ///   - @c %d, @c %i  — signed decimal integer
+    ///   - @c %x  — hexadecimal unsigned integer (lowercase)
     ///   - @c %f  — decimal float; only when @c Policy::kSupportFloatingPointDecimals is true.
     ///             Optional precision: @c %.Nf  (default: @c Policy::kDefaultFloatPrecision).
     ///
-    /// @note The @c - flag (left-align) is supported. All other flags
-    ///       (@c + @c   @c 0 @c #) and length modifiers
+    /// @note The @c - flag (left-align), @c + flag (always show sign) and
+    ///       @c 0 flag (zero-pad numeric values) are supported.
+    ///       Other flags (@c   @c #) and length modifiers
     ///       (@c h @c hh @c l @c ll @c j @c z @c t @c L) are parsed and silently
     ///       ignored — they do not affect output.
-    ///       Width produces space-padded output aligned according to the @c - flag.
+    ///       Width produces space-padded output aligned according to the @c - flag,
+    ///       or zero-padded for numeric specifiers when @c 0 is active.
     ///
     /// Truncates silently if the result exceeds capacity.
     /// @return Number of characters written (excluding null terminator).
@@ -79,6 +82,7 @@ private:
     // Policy-derived type aliases (used throughout the private implementation)
     // -------------------------------------------------------------------------
     using IntType   = typename Policy::IntType;
+    using UIntType  = typename Policy::UIntType;
     using FloatType = typename Policy::FloatType;
 
     // -------------------------------------------------------------------------
@@ -87,6 +91,7 @@ private:
     struct FormatFlags {
         bool left_justify : 1;  ///< @c - flag: pad on the right (left-justify content)
         bool show_sign    : 1;  ///< @c + flag: always emit a sign for numeric values
+        bool zero_pad     : 1;  ///< @c 0 flag: zero-pad numeric values to width
     };
 
     // -------------------------------------------------------------------------
@@ -112,8 +117,9 @@ private:
 
     /// Emit `width - content_len` space characters (right-align padding).
     /// No-op when content already meets or exceeds the width.
-    static void EmitPadding(Gadget& g, std::size_t width, std::size_t content_len) noexcept {
-        while (content_len < width) { g.Put(' '); ++content_len; }
+    static void EmitPadding(Gadget& g, std::size_t width, std::size_t content_len,
+                            char pad = ' ') noexcept {
+        while (content_len < width) { g.Put(pad); ++content_len; }
     }
 
     /// A gadget that counts characters without writing them.
@@ -142,6 +148,24 @@ private:
             value /= 10U;
         }
         while (len) g.Put(tmp[--len]); // reverse
+    }
+
+    static uint64_t AbsAsU64(IntType value) noexcept {
+        if (value < IntType(0))
+            return static_cast<uint64_t>(-(static_cast<int64_t>(value) + 1)) + 1ULL;
+        return static_cast<uint64_t>(value);
+    }
+
+    static void WriteHex(Gadget& g, UIntType value) noexcept {
+        static constexpr char kDigits[] = "0123456789abcdef";
+        char tmp[sizeof(UIntType) * 2]{};
+        std::size_t len{0U};
+        if (value == UIntType(0)) { g.Put('0'); return; }
+        while (value) {
+            tmp[len++] = kDigits[value & UIntType(0x0F)];
+            value >>= UIntType(4);
+        }
+        while (len) g.Put(tmp[--len]);
     }
 
     static void WriteInt(Gadget& g, IntType value, bool show_sign = false) noexcept {
@@ -220,11 +244,11 @@ private:
     static constexpr FloatType kMaxSafeIntegral = static_cast<FloatType>(INT64_MAX);
 
     static void WriteFloat(Gadget& g, FloatType value, std::size_t precision,
-                           bool show_sign = false) noexcept {
+                           bool show_sign = false, bool emit_sign = true) noexcept {
         constexpr FloatType kFloatMax{std::numeric_limits<FloatType>::max()};
         if (value != value)    { WriteRaw(g, "nan",  3U); return; } // NaN — no sign
         if (value >  kFloatMax) {
-            if (show_sign) g.Put('+');
+            if (emit_sign && show_sign) g.Put('+');
             WriteRaw(g, "inf",  3U); return;
         }
         if (value < -kFloatMax){ WriteRaw(g, "-inf", 4U); return; } // -inf
@@ -232,8 +256,8 @@ private:
         // Guard: abs value >= 2^63 would overflow int64_t in GetComponents.
         const FloatType abs_val{value < FloatType(0) ? -value : value};
         if (abs_val >= kMaxSafeIntegral) {
-            if (value < FloatType(0)) g.Put('-');
-            else if (show_sign)       g.Put('+');
+            if (emit_sign && value < FloatType(0)) g.Put('-');
+            else if (emit_sign && show_sign)       g.Put('+');
             WriteRaw(g, "ovf", 3U);
             return;
         }
@@ -242,8 +266,8 @@ private:
 
         const FloatComponents c = GetComponents(value, precision);
 
-        if (c.is_negative) g.Put('-');
-        else if (show_sign) g.Put('+');
+        if (emit_sign && c.is_negative) g.Put('-');
+        else if (emit_sign && show_sign) g.Put('+');
         WriteUnsigned(g, static_cast<uint64_t>(c.integral));
 
         if (precision > 0U) {
@@ -280,6 +304,7 @@ private:
                    *fmt == '0' || *fmt == '#') {
                 if (*fmt == '-') flags.left_justify = true;
                 if (*fmt == '+') flags.show_sign    = true;
+                if (*fmt == '0') flags.zero_pad     = true;
                 ++fmt;
             }
 
@@ -345,7 +370,14 @@ private:
                 case 'd':
                 case 'i': {
                     const IntType v{va_arg(args, IntType)};
-                    if (width > 0U) {
+                    if (width > 0U && flags.zero_pad && !flags.left_justify) {
+                        Gadget dry{MakeCountingGadget()};
+                        WriteInt(dry, v, flags.show_sign);
+                        if (v < IntType(0)) g.Put('-');
+                        else if (flags.show_sign) g.Put('+');
+                        EmitPadding(g, width, dry.pos, '0');
+                        WriteUnsigned(g, AbsAsU64(v));
+                    } else if (width > 0U) {
                         Gadget dry{MakeCountingGadget()};
                         WriteInt(dry, v, flags.show_sign);
                         if (!flags.left_justify) EmitPadding(g, width, dry.pos);
@@ -363,7 +395,24 @@ private:
                     // but only format it when the policy permits.
                     const FloatType v{static_cast<FloatType>(va_arg(args, double))};
                     if constexpr (Policy::kSupportFloatingPointDecimals) {
-                        if (width > 0U) {
+                        if (width > 0U && flags.zero_pad && !flags.left_justify) {
+                            const bool is_normal{v == v &&
+                                v >= -std::numeric_limits<FloatType>::max() &&
+                                v <=  std::numeric_limits<FloatType>::max() &&
+                                v > -kMaxSafeIntegral && v < kMaxSafeIntegral};
+                            Gadget dry{MakeCountingGadget()};
+                            WriteFloat(dry, v, precision, flags.show_sign);
+                            if (is_normal) {
+                                if (v < FloatType(0)) g.Put('-');
+                                else if (flags.show_sign) g.Put('+');
+                                EmitPadding(g, width, dry.pos, '0');
+                                WriteFloat(g, v, precision, flags.show_sign, false);
+                            } else {
+                                if (!flags.left_justify) EmitPadding(g, width, dry.pos);
+                                WriteFloat(g, v, precision, flags.show_sign);
+                                if ( flags.left_justify) EmitPadding(g, width, dry.pos);
+                            }
+                        } else if (width > 0U) {
                             Gadget dry{MakeCountingGadget()};
                             WriteFloat(dry, v, precision, flags.show_sign);
                             if (!flags.left_justify) EmitPadding(g, width, dry.pos);
@@ -372,6 +421,24 @@ private:
                         } else {
                             WriteFloat(g, v, precision, flags.show_sign);
                         }
+                    }
+                    break;
+                }
+                case 'x': {
+                    const UIntType v{va_arg(args, UIntType)};
+                    if (width > 0U && flags.zero_pad && !flags.left_justify) {
+                        Gadget dry{MakeCountingGadget()};
+                        WriteHex(dry, v);
+                        EmitPadding(g, width, dry.pos, '0');
+                        WriteHex(g, v);
+                    } else if (width > 0U) {
+                        Gadget dry{MakeCountingGadget()};
+                        WriteHex(dry, v);
+                        if (!flags.left_justify) EmitPadding(g, width, dry.pos);
+                        WriteHex(g, v);
+                        if ( flags.left_justify) EmitPadding(g, width, dry.pos);
+                    } else {
+                        WriteHex(g, v);
                     }
                     break;
                 }

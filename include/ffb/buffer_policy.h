@@ -14,6 +14,9 @@ namespace ffb {
 /// - `IntType`   — the type read from the va_list for @c %i / @c %d.
 ///                 Must be a type that survives default argument promotion
 ///                 (i.e. not narrower than @c int). Default: @c int.
+/// - `UIntType`  — the type read from the va_list for @c %x.
+///                 Must be an unsigned type surviving default argument promotion.
+///                 Default: @c unsigned @c int.
 /// - `FloatType` — the internal floating-point type used by the formatter
 ///                 for @c %f processing. Default: @c float.
 ///
@@ -27,7 +30,8 @@ namespace ffb {
 /// @code
 ///   struct Int64Policy {
 ///       static constexpr bool kSupportFloatingPointDecimals = true;
-///       using IntType   = long long;  // accept 64-bit integers via %i/%d
+///       using IntType   = long long;          // accept 64-bit integers via %i/%d
+///       using UIntType  = unsigned long long; // accept 64-bit unsigned via %x
 ///       using FloatType = float;
 ///   };
 /// @endcode
@@ -45,6 +49,10 @@ struct AllFeatures {
     /// Type read from the va_list for the @c %i / @c %d specifier.
     /// Must be at least as wide as @c int (no implicit narrowing via va_arg).
     using IntType = int;
+
+    /// Type read from the va_list for the @c %x specifier.
+    /// Must be an unsigned type surviving default argument promotion.
+    using UIntType = unsigned int;
 
     /// Internal floating-point type used for @c %f decomposition.
     /// va_arg always promotes to @c double; the value is cast to this type

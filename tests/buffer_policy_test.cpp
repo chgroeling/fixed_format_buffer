@@ -11,6 +11,7 @@ struct NoFloat {
     static constexpr bool        kSupportFloatingPointDecimals = false;
     static constexpr std::size_t kDefaultFloatPrecision        = 6U;
     using IntType   = int;
+    using UIntType  = unsigned int;
     using FloatType = float;
 };
 

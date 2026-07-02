@@ -171,3 +171,31 @@ TEST(SprintfComparison, LiteralPercent) {
     buf.Format("100%%");
     EXPECT_EQ(buf.View(), Ref("100%%"));
 }
+
+// ---------------------------------------------------------------------------
+// %x — hex
+// ---------------------------------------------------------------------------
+
+TEST(SprintfComparison, Hex_Basic) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%x", 42U);
+    EXPECT_EQ(buf.View(), Ref("%x", 42U));
+}
+
+TEST(SprintfComparison, Hex_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%x", 0U);
+    EXPECT_EQ(buf.View(), Ref("%x", 0U));
+}
+
+TEST(SprintfComparison, Hex_Large) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%x", 0x7FFFFFFFU);
+    EXPECT_EQ(buf.View(), Ref("%x", 0x7FFFFFFFU));
+}
+
+TEST(SprintfComparison, Hex_Width_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%08x", 0xffU);
+    EXPECT_EQ(buf.View(), Ref("%08x", 0xffU));
+}

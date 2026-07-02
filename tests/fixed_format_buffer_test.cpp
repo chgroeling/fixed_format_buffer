@@ -213,6 +213,88 @@ TEST(FixedFormatBuffer, Width_Int_MultiDigitWidth) {
 }
 
 // ---------------------------------------------------------------------------
+// Format — 0 flag (zero-pad)
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, ZeroPad_Int_WiderThanContent) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%08d", 42);
+    EXPECT_EQ(buf.View(), "00000042");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Int_ExactFit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%02d", 42);
+    EXPECT_EQ(buf.View(), "42");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Int_NarrowerThanContent) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%02d", 12345);
+    EXPECT_EQ(buf.View(), "12345");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Int_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%08d", -7);
+    EXPECT_EQ(buf.View(), "-0000007");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Int_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%06d", 0);
+    EXPECT_EQ(buf.View(), "000000");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Int_WithShowSign) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%+08d", 42);
+    EXPECT_EQ(buf.View(), "+0000042");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Int_NegativeWithShowSign) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%+08d", -42);
+    EXPECT_EQ(buf.View(), "-0000042");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Int_LeftJustifyOverridesZero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-08d", 42);
+    EXPECT_EQ(buf.View(), "42      ");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Float_WiderThanContent) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%08.2f", 3.14f);
+    EXPECT_EQ(buf.View(), "00003.14");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Float_ExactFit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%04.2f", 3.14f);
+    EXPECT_EQ(buf.View(), "3.14");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Float_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%08.2f", -1.5f);
+    EXPECT_EQ(buf.View(), "-0001.50");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Float_WithShowSign) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%+08.2f", 1.5f);
+    EXPECT_EQ(buf.View(), "+0001.50");
+}
+
+TEST(FixedFormatBuffer, ZeroPad_Float_LeftJustifyOverridesZero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-08.2f", 3.14f);
+    EXPECT_EQ(buf.View(), "3.14    ");
+}
+
+// ---------------------------------------------------------------------------
 // Format — + flag (show_sign)
 // ---------------------------------------------------------------------------
 
@@ -342,4 +424,80 @@ TEST(FixedFormatBuffer, FormatChar_Width_ExactFit) {
     FixedFormatBuffer<64> buf;
     buf.Format("%1c", 'Z');
     EXPECT_EQ(buf.View(), "Z");
+}
+
+// ---------------------------------------------------------------------------
+// Format — %x (hex)
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, FormatHex_Basic) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%x", 0x2aU);
+    EXPECT_EQ(buf.View(), "2a");
+}
+
+TEST(FixedFormatBuffer, FormatHex_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%x", 0U);
+    EXPECT_EQ(buf.View(), "0");
+}
+
+TEST(FixedFormatBuffer, FormatHex_MaxUint32) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%x", 0xFFFFFFFFU);
+    EXPECT_EQ(buf.View(), "ffffffff");
+}
+
+TEST(FixedFormatBuffer, FormatHex_LowercaseDigits) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%x", 0xABCDEFU);
+    EXPECT_EQ(buf.View(), "abcdef");
+}
+
+TEST(FixedFormatBuffer, FormatHex_Width_RightJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%8x", 0x2aU);
+    EXPECT_EQ(buf.View(), "      2a");
+}
+
+TEST(FixedFormatBuffer, FormatHex_Width_LeftJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-8x", 0x2aU);
+    EXPECT_EQ(buf.View(), "2a      ");
+}
+
+TEST(FixedFormatBuffer, FormatHex_Width_ExactFit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%2x", 0x2aU);
+    EXPECT_EQ(buf.View(), "2a");
+}
+
+TEST(FixedFormatBuffer, FormatHex_Width_NarrowerThanContent) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%2x", 0xabcU);
+    EXPECT_EQ(buf.View(), "abc");
+}
+
+TEST(FixedFormatBuffer, FormatHex_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%08x", 0x2aU);
+    EXPECT_EQ(buf.View(), "0000002a");
+}
+
+TEST(FixedFormatBuffer, FormatHex_ZeroPad_ExactFit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%02x", 0x2aU);
+    EXPECT_EQ(buf.View(), "2a");
+}
+
+TEST(FixedFormatBuffer, FormatHex_LeftJustifyOverridesZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-08x", 0x2aU);
+    EXPECT_EQ(buf.View(), "2a      ");
+}
+
+TEST(FixedFormatBuffer, FormatHex_InSentence) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("val=0x%x done", 0xffU);
+    EXPECT_EQ(buf.View(), "val=0xff done");
 }
