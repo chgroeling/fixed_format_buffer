@@ -26,10 +26,17 @@ modified, reused, or destroyed.
 ffb::FixedFormatBuffer<64> buf;               // 64-char capacity on the stack
 
 buf.Format("sensor=%d, temp=%.2f C", 7, 23.5f);
-std::string_view result{buf.View()};          // "sensor=7, temp=23.50 C"
+buf.View();  // → "sensor=7, temp=23.50 C"
 
-buf.Format("%08x", 0xCAFEU);                  // zero-padded hex → "0000cafe"
-buf.Format("%+d", 42);                        // show sign → "+42"
+// View() returns a string_view into the buffer. It is invalidated
+// by the next Format() call, Clear(), or when the buffer goes out of scope.
+// Copy the string_view if you need to keep the value:
+
+std::string snapshot{buf.View()};             // copy before overwriting
+
+buf.Format("%08x", 0xCAFEU);                 // overwrites the buffer
+buf.View();  // → "0000cafe"
+snapshot;    // → "sensor=7, temp=23.50 C"  (still valid)
 ```
 
 ## Custom policy types
