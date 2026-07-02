@@ -311,13 +311,13 @@ private:
                 }
                 case 'd':
                 case 'i': {
-                    const int64_t v = static_cast<int64_t>(va_arg(args, IntType));
+                    const IntType v = va_arg(args, IntType);
                     if (width > 0U) {
                         Gadget dry = MakeCountingGadget();
-                        WriteInt(dry, v);
+                        WriteInt(dry, static_cast<int64_t>(v));
                         EmitPadding(g, width, dry.pos);
                     }
-                    WriteInt(g, v);
+                    WriteInt(g, static_cast<int64_t>(v));
                     break;
                 }
                 case 'f': {
