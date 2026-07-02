@@ -124,8 +124,7 @@ private:
         }
     }
 
-    static constexpr std::size_t kDefaultFloatPrecision = 6U;
-    static constexpr std::size_t kMaxFloatPrecision     = 6U;
+    static constexpr std::size_t kMaxFloatPrecision = 6U;
 
     /// Powers of 10 indexed by precision (0 .. kMaxFloatPrecision).
     static constexpr FloatType kPow10Table[] = {
@@ -239,7 +238,7 @@ private:
             if (!*fmt) break;
 
             // Optional precision: .digits  (e.g. "%.2f")
-            std::size_t precision = kDefaultFloatPrecision;
+            std::size_t precision = Policy::kDefaultFloatPrecision;
             if (*fmt == '.') {
                 ++fmt;
                 precision = 0U;
