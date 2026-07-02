@@ -4,6 +4,7 @@
 #include <cfloat>
 #include <cstdarg>
 #include <cstddef>
+#include <cstdint>
 #include <string_view>
 
 #include "ffb/buffer_policy.h"
@@ -95,7 +96,7 @@ private:
     }
 
     /// Write an unsigned 64-bit integer in decimal.
-    static void WriteUnsigned(Gadget& g, unsigned long long value) noexcept {
+    static void WriteUnsigned(Gadget& g, uint64_t value) noexcept {
         char tmp[20]; // 2^64 needs at most 20 decimal digits
         std::size_t len = 0U;
         if (value == 0ULL) { g.Put('0'); return; }
@@ -106,15 +107,15 @@ private:
         while (len) g.Put(tmp[--len]); // reverse
     }
 
-    static void WriteInt(Gadget& g, int value) noexcept {
+    static void WriteInt(Gadget& g, int32_t value) noexcept {
         if (value < 0) {
             g.Put('-');
             // Negate via unsigned arithmetic to avoid UB on INT_MIN.
-            WriteUnsigned(g, static_cast<unsigned long long>(
-                static_cast<unsigned int>(-(value + 1)) + 1U));
+            WriteUnsigned(g, static_cast<uint64_t>(
+                static_cast<uint32_t>(-(value + 1)) + 1U));
         } else {
-            WriteUnsigned(g, static_cast<unsigned long long>(
-                static_cast<unsigned int>(value)));
+            WriteUnsigned(g, static_cast<uint64_t>(
+                static_cast<uint32_t>(value)));
         }
     }
 
@@ -139,11 +140,11 @@ private:
         if (value < 0.0) { g.Put('-'); value = -value; }
         if (precision > kMaxFloatPrecision) precision = kMaxFloatPrecision;
 
-        const double             scale      = kPow10Table[precision];
-        const unsigned long long as_uint    = static_cast<unsigned long long>(value * scale + 0.5);
-        const unsigned long long divisor    = static_cast<unsigned long long>(scale);
-        const unsigned long long integral   = as_uint / divisor;
-        const unsigned long long fractional = as_uint % divisor;
+        const double    scale      = kPow10Table[precision];
+        const uint64_t  as_uint    = static_cast<uint64_t>(value * scale + 0.5);
+        const uint64_t  divisor    = static_cast<uint64_t>(scale);
+        const uint64_t  integral   = as_uint / divisor;
+        const uint64_t  fractional = as_uint % divisor;
 
         WriteUnsigned(g, integral);
 
@@ -152,7 +153,7 @@ private:
             // Build fractional digits right-to-left, then emit left-to-right
             // so leading zeros are preserved.
             char frac[kMaxFloatPrecision];
-            unsigned long long tmp = fractional;
+            uint64_t tmp = fractional;
             for (std::size_t i = precision; i > 0U; --i) {
                 frac[i - 1U] = static_cast<char>('0' + tmp % 10U);
                 tmp /= 10U;
@@ -189,7 +190,7 @@ private:
                     break;
                 case 'd':
                 case 'i':
-                    WriteInt(g, va_arg(args, int));
+                    WriteInt(g, va_arg(args, int32_t));
                     break;
                 case 'f': {
                     // Always consume the argument to keep va_list aligned,
