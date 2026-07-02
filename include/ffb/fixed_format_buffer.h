@@ -81,6 +81,14 @@ private:
     using FloatType = typename Policy::FloatType;
 
     // -------------------------------------------------------------------------
+    // Format flags (parsed from the specifier, e.g. "%-+10.2f")
+    // -------------------------------------------------------------------------
+    struct FormatFlags {
+        bool left_justify : 1;  ///< @c - flag: pad on the right (left-justify content)
+        bool show_sign    : 1;  ///< @c + flag: always emit a sign for numeric values
+    };
+
+    // -------------------------------------------------------------------------
     // Output gadget
     //
     // Wraps the destination buffer. pos always increments even past max_chars,
@@ -135,12 +143,13 @@ private:
         while (len) g.Put(tmp[--len]); // reverse
     }
 
-    static void WriteInt(Gadget& g, IntType value) noexcept {
+    static void WriteInt(Gadget& g, IntType value, bool show_sign = false) noexcept {
         if (value < IntType(0)) {
             g.Put('-');
             // Negate via uint64_t arithmetic to avoid UB on IntType's minimum value.
             WriteUnsigned(g, static_cast<uint64_t>(-(static_cast<int64_t>(value) + 1)) + 1ULL);
         } else {
+            if (show_sign) g.Put('+');
             WriteUnsigned(g, static_cast<uint64_t>(value));
         }
     }
@@ -210,16 +219,21 @@ private:
     // cast<FloatType>(INT64_MAX) rounds up to 2^63; anything >= that overflows.
     static constexpr FloatType kMaxSafeIntegral = static_cast<FloatType>(INT64_MAX);
 
-    static void WriteFloat(Gadget& g, FloatType value, std::size_t precision) noexcept {
+    static void WriteFloat(Gadget& g, FloatType value, std::size_t precision,
+                           bool show_sign = false) noexcept {
         constexpr FloatType kFloatMax = std::numeric_limits<FloatType>::max();
-        if (value != value)    { WriteRaw(g, "nan",  3U); return; } // NaN
-        if (value >  kFloatMax){ WriteRaw(g, "inf",  3U); return; } // +inf
+        if (value != value)    { WriteRaw(g, "nan",  3U); return; } // NaN — no sign
+        if (value >  kFloatMax) {
+            if (show_sign) g.Put('+');
+            WriteRaw(g, "inf",  3U); return;
+        }
         if (value < -kFloatMax){ WriteRaw(g, "-inf", 4U); return; } // -inf
 
         // Guard: abs value >= 2^63 would overflow int64_t in GetComponents.
         const FloatType abs_val = value < FloatType(0) ? -value : value;
         if (abs_val >= kMaxSafeIntegral) {
             if (value < FloatType(0)) g.Put('-');
+            else if (show_sign)       g.Put('+');
             WriteRaw(g, "ovf", 3U);
             return;
         }
@@ -229,6 +243,7 @@ private:
         const FloatComponents c = GetComponents(value, precision);
 
         if (c.is_negative) g.Put('-');
+        else if (show_sign) g.Put('+');
         WriteUnsigned(g, static_cast<uint64_t>(c.integral));
 
         if (precision > 0U) {
@@ -259,11 +274,12 @@ private:
             if (!*fmt) break;
 
             // --- Flags ---
-            // '-' (left-align) is acted upon; others are recognised but ignored.
-            bool left_justify = false;
+            // '-' (left-justify) and '+' (show_sign) are acted upon; others are recognised but ignored.
+            FormatFlags flags{};
             while (*fmt == '-' || *fmt == '+' || *fmt == ' ' ||
                    *fmt == '0' || *fmt == '#') {
-                if (*fmt == '-') left_justify = true;
+                if (*fmt == '-') flags.left_justify = true;
+                if (*fmt == '+') flags.show_sign    = true;
                 ++fmt;
             }
 
@@ -307,9 +323,9 @@ private:
                     if (width > 0U) {
                         Gadget dry = MakeCountingGadget();
                         WriteString(dry, s);
-                        if (!left_justify) EmitPadding(g, width, dry.pos);
+                        if (!flags.left_justify) EmitPadding(g, width, dry.pos);
                         WriteString(g, s);
-                        if ( left_justify) EmitPadding(g, width, dry.pos);
+                        if ( flags.left_justify) EmitPadding(g, width, dry.pos);
                     } else {
                         WriteString(g, s);
                     }
@@ -320,12 +336,12 @@ private:
                     const IntType v = va_arg(args, IntType);
                     if (width > 0U) {
                         Gadget dry = MakeCountingGadget();
-                        WriteInt(dry, v);
-                        if (!left_justify) EmitPadding(g, width, dry.pos);
-                        WriteInt(g, v);
-                        if ( left_justify) EmitPadding(g, width, dry.pos);
+                        WriteInt(dry, v, flags.show_sign);
+                        if (!flags.left_justify) EmitPadding(g, width, dry.pos);
+                        WriteInt(g, v, flags.show_sign);
+                        if ( flags.left_justify) EmitPadding(g, width, dry.pos);
                     } else {
-                        WriteInt(g, v);
+                        WriteInt(g, v, flags.show_sign);
                     }
                     break;
                 }
@@ -338,12 +354,12 @@ private:
                     if constexpr (Policy::kSupportFloatingPointDecimals) {
                         if (width > 0U) {
                             Gadget dry = MakeCountingGadget();
-                            WriteFloat(dry, v, precision);
-                            if (!left_justify) EmitPadding(g, width, dry.pos);
-                            WriteFloat(g, v, precision);
-                            if ( left_justify) EmitPadding(g, width, dry.pos);
+                            WriteFloat(dry, v, precision, flags.show_sign);
+                            if (!flags.left_justify) EmitPadding(g, width, dry.pos);
+                            WriteFloat(g, v, precision, flags.show_sign);
+                            if ( flags.left_justify) EmitPadding(g, width, dry.pos);
                         } else {
-                            WriteFloat(g, v, precision);
+                            WriteFloat(g, v, precision, flags.show_sign);
                         }
                     }
                     break;
