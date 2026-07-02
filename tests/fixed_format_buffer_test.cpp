@@ -211,3 +211,61 @@ TEST(FixedFormatBuffer, Width_Int_MultiDigitWidth) {
     buf.Format("%10d", 99);
     EXPECT_EQ(buf.View(), "        99");
 }
+
+// ---------------------------------------------------------------------------
+// Format — + flag (show_sign)
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, ShowSign_Int_Positive) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%+d", 42);
+    EXPECT_EQ(buf.View(), "+42");
+}
+
+TEST(FixedFormatBuffer, ShowSign_Int_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%+d", -42);
+    EXPECT_EQ(buf.View(), "-42");
+}
+
+TEST(FixedFormatBuffer, ShowSign_Int_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%+d", 0);
+    EXPECT_EQ(buf.View(), "+0");
+}
+
+TEST(FixedFormatBuffer, ShowSign_Int_WithWidth_RightJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%+8d", 42);
+    EXPECT_EQ(buf.View(), "     +42");
+}
+
+TEST(FixedFormatBuffer, ShowSign_Int_WithWidth_LeftJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-+8d", 42);
+    EXPECT_EQ(buf.View(), "+42     ");
+}
+
+TEST(FixedFormatBuffer, ShowSign_Float_Positive) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%+.2f", 1.5f);
+    EXPECT_EQ(buf.View(), "+1.50");
+}
+
+TEST(FixedFormatBuffer, ShowSign_Float_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%+.2f", -1.5f);
+    EXPECT_EQ(buf.View(), "-1.50");
+}
+
+TEST(FixedFormatBuffer, ShowSign_Float_WithWidth) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%+8.2f", 3.14f);
+    EXPECT_EQ(buf.View(), "   +3.14");
+}
+
+TEST(FixedFormatBuffer, ShowSign_Float_WithWidth_LeftJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-+8.2f", 3.14f);
+    EXPECT_EQ(buf.View(), "+3.14   ");
+}
