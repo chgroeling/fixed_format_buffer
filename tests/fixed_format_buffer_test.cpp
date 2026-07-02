@@ -269,3 +269,37 @@ TEST(FixedFormatBuffer, ShowSign_Float_WithWidth_LeftJustify) {
     buf.Format("%-+8.2f", 3.14f);
     EXPECT_EQ(buf.View(), "+3.14   ");
 }
+
+// ---------------------------------------------------------------------------
+// Format — left-justify combined with forced sign (%-+)
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, LeftJustifyShowSign_Int_Positive) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-+10d", 42);
+    EXPECT_EQ(buf.View(), "+42       ");
+}
+
+TEST(FixedFormatBuffer, LeftJustifyShowSign_Int_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-+10d", -42);
+    EXPECT_EQ(buf.View(), "-42       ");
+}
+
+TEST(FixedFormatBuffer, LeftJustifyShowSign_Int_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-+10d", 0);
+    EXPECT_EQ(buf.View(), "+0        ");
+}
+
+TEST(FixedFormatBuffer, LeftJustifyShowSign_Float_Positive) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-+12.3f", 3.14f);
+    EXPECT_EQ(buf.View(), "+3.140      ");
+}
+
+TEST(FixedFormatBuffer, LeftJustifyShowSign_Float_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-+12.3f", -3.14f);
+    EXPECT_EQ(buf.View(), "-3.140      ");
+}
