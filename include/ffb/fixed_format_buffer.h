@@ -37,6 +37,7 @@ public:
     ///   - @c %c  — single character (@c char)
     ///   - @c %s  — null-terminated string (@c const @c char*)
     ///   - @c %d, @c %i  — signed decimal integer
+    ///   - @c %u  — unsigned decimal integer
     ///   - @c %x  — hexadecimal unsigned integer (lowercase)
     ///   - @c %f  — decimal float; only when @c Policy::kSupportFloatingPointDecimals is true.
     ///             Optional precision: @c %.Nf  (default: @c Policy::kDefaultFloatPrecision).
@@ -421,6 +422,24 @@ private:
                         } else {
                             WriteFloat(g, v, precision, flags.show_sign);
                         }
+                    }
+                    break;
+                }
+                case 'u': {
+                    const UIntType v{va_arg(args, UIntType)};
+                    if (width > 0U && flags.zero_pad && !flags.left_justify) {
+                        Gadget dry{MakeCountingGadget()};
+                        WriteUnsigned(dry, v);
+                        EmitPadding(g, width, dry.pos, '0');
+                        WriteUnsigned(g, v);
+                    } else if (width > 0U) {
+                        Gadget dry{MakeCountingGadget()};
+                        WriteUnsigned(dry, v);
+                        if (!flags.left_justify) EmitPadding(g, width, dry.pos);
+                        WriteUnsigned(g, v);
+                        if ( flags.left_justify) EmitPadding(g, width, dry.pos);
+                    } else {
+                        WriteUnsigned(g, v);
                     }
                     break;
                 }

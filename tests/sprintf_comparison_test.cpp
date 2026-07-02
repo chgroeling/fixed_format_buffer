@@ -199,3 +199,25 @@ TEST(SprintfComparison, Hex_Width_ZeroPad) {
     buf.Format("%08x", 0xffU);
     EXPECT_EQ(buf.View(), Ref("%08x", 0xffU));
 }
+
+// ---------------------------------------------------------------------------
+// %u — unsigned decimal
+// ---------------------------------------------------------------------------
+
+TEST(SprintfComparison, Unsigned_Basic) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%u", 42U);
+    EXPECT_EQ(buf.View(), Ref("%u", 42U));
+}
+
+TEST(SprintfComparison, Unsigned_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%u", 0U);
+    EXPECT_EQ(buf.View(), Ref("%u", 0U));
+}
+
+TEST(SprintfComparison, Unsigned_Large) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%u", 0x7FFFFFFFU);
+    EXPECT_EQ(buf.View(), Ref("%u", 0x7FFFFFFFU));
+}

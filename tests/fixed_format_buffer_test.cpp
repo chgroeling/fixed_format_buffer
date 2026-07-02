@@ -501,3 +501,55 @@ TEST(FixedFormatBuffer, FormatHex_InSentence) {
     buf.Format("val=0x%x done", 0xffU);
     EXPECT_EQ(buf.View(), "val=0xff done");
 }
+
+// ---------------------------------------------------------------------------
+// Format — %u (unsigned decimal)
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, FormatUnsigned_Basic) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%u", 42U);
+    EXPECT_EQ(buf.View(), "42");
+}
+
+TEST(FixedFormatBuffer, FormatUnsigned_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%u", 0U);
+    EXPECT_EQ(buf.View(), "0");
+}
+
+TEST(FixedFormatBuffer, FormatUnsigned_MaxUint32) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%u", 0xFFFFFFFFU);
+    EXPECT_EQ(buf.View(), "4294967295");
+}
+
+TEST(FixedFormatBuffer, FormatUnsigned_Width_RightJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%8u", 42U);
+    EXPECT_EQ(buf.View(), "      42");
+}
+
+TEST(FixedFormatBuffer, FormatUnsigned_Width_LeftJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-8u", 42U);
+    EXPECT_EQ(buf.View(), "42      ");
+}
+
+TEST(FixedFormatBuffer, FormatUnsigned_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%08u", 42U);
+    EXPECT_EQ(buf.View(), "00000042");
+}
+
+TEST(FixedFormatBuffer, FormatUnsigned_ZeroPad_ExactFit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%02u", 42U);
+    EXPECT_EQ(buf.View(), "42");
+}
+
+TEST(FixedFormatBuffer, FormatUnsigned_LeftJustifyOverridesZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-08u", 42U);
+    EXPECT_EQ(buf.View(), "42      ");
+}
