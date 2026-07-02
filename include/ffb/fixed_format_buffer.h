@@ -260,14 +260,14 @@ private:
 
             // --- Flags ---
             // '-' (left-align) is acted upon; others are recognised but ignored.
-            bool left_align = false;
+            bool left_justify = false;
             while (*fmt == '-' || *fmt == '+' || *fmt == ' ' ||
                    *fmt == '0' || *fmt == '#') {
-                if (*fmt == '-') left_align = true;
+                if (*fmt == '-') left_justify = true;
                 ++fmt;
             }
 
-            // --- Width (space-padded; left or right depending on left_align) ---
+            // --- Width (space-padded; left or right depending on justification) ---
             // First digit must be 1-9 (distinguishes width from flag '0'),
             // subsequent digits may include 0.
             std::size_t width = 0U;
@@ -307,9 +307,9 @@ private:
                     if (width > 0U) {
                         Gadget dry = MakeCountingGadget();
                         WriteString(dry, s);
-                        if (!left_align) EmitPadding(g, width, dry.pos);
+                        if (!left_justify) EmitPadding(g, width, dry.pos);
                         WriteString(g, s);
-                        if ( left_align) EmitPadding(g, width, dry.pos);
+                        if ( left_justify) EmitPadding(g, width, dry.pos);
                     } else {
                         WriteString(g, s);
                     }
@@ -321,9 +321,9 @@ private:
                     if (width > 0U) {
                         Gadget dry = MakeCountingGadget();
                         WriteInt(dry, v);
-                        if (!left_align) EmitPadding(g, width, dry.pos);
+                        if (!left_justify) EmitPadding(g, width, dry.pos);
                         WriteInt(g, v);
-                        if ( left_align) EmitPadding(g, width, dry.pos);
+                        if ( left_justify) EmitPadding(g, width, dry.pos);
                     } else {
                         WriteInt(g, v);
                     }
@@ -339,9 +339,9 @@ private:
                         if (width > 0U) {
                             Gadget dry = MakeCountingGadget();
                             WriteFloat(dry, v, precision);
-                            if (!left_align) EmitPadding(g, width, dry.pos);
+                            if (!left_justify) EmitPadding(g, width, dry.pos);
                             WriteFloat(g, v, precision);
-                            if ( left_align) EmitPadding(g, width, dry.pos);
+                            if ( left_justify) EmitPadding(g, width, dry.pos);
                         } else {
                             WriteFloat(g, v, precision);
                         }
