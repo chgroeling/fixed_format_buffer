@@ -6,6 +6,11 @@
 using ffb::AllFeatures;
 using ffb::FixedFormatBuffer;
 
+// Local policy for tests — float disabled.
+struct NoFloat {
+    static constexpr bool kFloatSupport = false;
+};
+
 // ---------------------------------------------------------------------------
 // Policy instantiation smoke tests
 // ---------------------------------------------------------------------------
@@ -20,12 +25,40 @@ TEST(BufferPolicy, ExplicitAllFeaturesPolicyInstantiates) {
     EXPECT_TRUE(buf.Empty());
 }
 
-// Local policy — float disabled.
-struct NoFloat {
-    static constexpr bool kFloatSupport = false;
-};
-
 TEST(BufferPolicy, NoFloatPolicyInstantiates) {
     FixedFormatBuffer<64, NoFloat> buf;
     EXPECT_TRUE(buf.Empty());
+}
+
+// ---------------------------------------------------------------------------
+// AllFeatures: float formatting works
+// ---------------------------------------------------------------------------
+
+TEST(BufferPolicy, AllFeaturesFormatsFloat) {
+    FixedFormatBuffer<64, AllFeatures> buf;
+    buf.Format("%.2f", 3.14);
+    EXPECT_EQ(buf.View(), "3.14");
+}
+
+// ---------------------------------------------------------------------------
+// NoFloat: %f arg is consumed but produces no output; subsequent args OK
+// ---------------------------------------------------------------------------
+
+TEST(BufferPolicy, NoFloatSkipsFloatOutput) {
+    FixedFormatBuffer<64, NoFloat> buf;
+    buf.Format("%f", 3.14);
+    EXPECT_EQ(buf.View(), "");
+}
+
+TEST(BufferPolicy, NoFloatKeepsVaListAligned) {
+    // %f is consumed silently; %s after it must still read the right arg.
+    FixedFormatBuffer<64, NoFloat> buf;
+    buf.Format("%f %s", 1.0, "ok");
+    EXPECT_EQ(buf.View(), " ok");
+}
+
+TEST(BufferPolicy, NoFloatAllowsIntAndString) {
+    FixedFormatBuffer<64, NoFloat> buf;
+    buf.Format("i=%i s=%s", 7, "hi");
+    EXPECT_EQ(buf.View(), "i=7 s=hi");
 }
