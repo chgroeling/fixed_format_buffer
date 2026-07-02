@@ -305,3 +305,19 @@ TEST(BufferSafety, FloatLongerThanBuffer_NegativeSign) {
     EXPECT_EQ(buf.View(), "-3.");
     EXPECT_EQ(buf.View().data()[3], '\0');
 }
+
+TEST(BufferSafety, IntLongerThanBuffer_OnlySignSurvives) {
+    FixedFormatBuffer<1> buf;
+    buf.Format("%i", -42);       // "-42" = 3 chars; only '-' fits in N=1
+    EXPECT_EQ(buf.Size(), 1u);
+    EXPECT_EQ(buf.View(), "-");
+    EXPECT_EQ(buf.View().data()[1], '\0');
+}
+
+TEST(BufferSafety, FloatLongerThanBuffer_OnlySignSurvives) {
+    FixedFormatBuffer<1> buf;
+    buf.Format("%.2f", -3.14f);  // "-3.14" = 5 chars; only '-' fits in N=1
+    EXPECT_EQ(buf.Size(), 1u);
+    EXPECT_EQ(buf.View(), "-");
+    EXPECT_EQ(buf.View().data()[1], '\0');
+}
