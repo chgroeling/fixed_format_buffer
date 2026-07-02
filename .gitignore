@@ -71,3 +71,6 @@ Testing/
 
 # Temporary files
 temp/
+
+# Doxygen output
+docs/

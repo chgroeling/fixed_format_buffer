@@ -1,0 +1,42 @@
+PROJECT_NAME           = fixed_format_buffer
+PROJECT_BRIEF          = "Allocation-free fixed-capacity formatting buffer for embedded C++"
+PROJECT_NUMBER         = 0.1.0
+
+OUTPUT_DIRECTORY       = docs
+
+INPUT                  = include/
+
+RECURSIVE              = YES
+
+EXTRACT_ALL            = NO
+EXTRACT_PRIVATE        = YES
+EXTRACT_STATIC         = YES
+EXTRACT_ANON_NSPACES   = NO
+
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+GENERATE_XML           = NO
+GENERATE_MAN           = NO
+
+CASE_SENSE_NAMES       = YES
+
+QUIET                  = YES
+WARN_IF_UNDOCUMENTED   = YES
+WARN_NO_PARAMDOC       = YES
+
+JAVADOC_AUTOBRIEF      = YES
+
+SOURCE_BROWSER         = YES
+INLINE_SOURCES         = NO
+STRIP_CODE_COMMENTS    = YES
+REFERENCED_BY_RELATION = NO
+REFERENCES_RELATION    = NO
+
+USE_MDFILE_AS_MAINPAGE = README.md
+
+HTML_EXTRA_STYLESHEET   =
+HTML_COLORSTYLE_HUE     = 220
+HTML_COLORSTYLE_SAT     = 100
+HTML_COLORSTYLE_GAMMA   = 80
+GENERATE_TREEVIEW       = YES
+DISABLE_INDEX           = NO

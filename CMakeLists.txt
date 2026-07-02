@@ -16,3 +16,12 @@ target_compile_features(fixed_format_buffer INTERFACE cxx_std_17)
 
 enable_testing()
 add_subdirectory(tests)
+
+find_package(Doxygen QUIET)
+if(Doxygen_FOUND)
+    doxygen_add_docs(doc
+        include/
+        ${CMAKE_CURRENT_SOURCE_DIR}/Doxyfile
+        COMMENT "Generate API documentation"
+    )
+endif()
