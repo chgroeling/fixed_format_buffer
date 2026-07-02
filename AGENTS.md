@@ -44,21 +44,21 @@ Usage: `#include "ffb/fixed_format_buffer.h"` and `ffb::FixedFormatBuffer<N>`.
 
 ## Variable Initialization
 
-Always use brace-initialization (`{}`) for all variable declarations — never `=`:
+Always use **list-initialization** (brace syntax, `{}`) for all variable declarations — never `=`:
 
 ```cpp
-// Correct
+// Correct — list-initialization
 std::size_t len{0U};
 const char first{*fmt++};
 FloatType abs_val{c.is_negative ? -value : value};
 Gadget dry{MakeCountingGadget()};
 
-// Wrong
+// Wrong — copy-initialization
 std::size_t len = 0U;
 const char first = *fmt++;
 ```
 
-This applies to all local variables, parameters with default values, and `constexpr` constants.
+This applies to all local variables, `constexpr` constants, and any other declarations.
 Member declarations that already use `{}` (e.g., `size_{0}`) are already compliant.
 
 ## Git Workflow
