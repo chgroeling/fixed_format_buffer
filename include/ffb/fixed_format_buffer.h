@@ -31,11 +31,17 @@ public:
 
     /// Format into the buffer using a subset of printf-style specifiers.
     ///
+    /// Supported syntax: @c %[flags][width][.precision][length]specifier
+    ///
     /// Supported specifiers:
     ///   - @c %s  — null-terminated string (@c const @c char*)
-    ///   - @c %d, @c %i  — signed decimal integer (@c int)
-    ///   - @c %f  — decimal float (@c double); only when @c Policy::kSupportFloatingPointDecimals is true.
-    ///             Optional precision: @c %.Nf  (default: 6 digits).
+    ///   - @c %d, @c %i  — signed decimal integer
+    ///   - @c %f  — decimal float; only when @c Policy::kSupportFloatingPointDecimals is true.
+    ///             Optional precision: @c %.Nf  (default: @c Policy::kDefaultFloatPrecision).
+    ///
+    /// @note Flags (@c - @c + @c   @c 0 @c #), width, and length modifiers
+    ///       (@c h @c hh @c l @c ll @c j @c z @c t @c L) are parsed and silently
+    ///       ignored — they do not affect output. Only @c .precision is acted upon.
     ///
     /// Truncates silently if the result exceeds capacity.
     /// @return Number of characters written (excluding null terminator).
@@ -237,7 +243,22 @@ private:
             ++fmt; // consume '%'
             if (!*fmt) break;
 
-            // Optional precision: .digits  (e.g. "%.2f")
+            // --- Flags (ignored, but consumed) ---
+            // Recognised flag characters: '-', '+', ' ', '0', '#'
+            while (*fmt == '-' || *fmt == '+' || *fmt == ' ' ||
+                   *fmt == '0' || *fmt == '#') {
+                ++fmt;
+            }
+
+            // --- Width (ignored, but consumed) ---
+            // First digit must be 1-9 (distinguishes width from flag '0'),
+            // subsequent digits may include 0.
+            if (*fmt >= '1' && *fmt <= '9') {
+                ++fmt;
+                while (*fmt >= '0' && *fmt <= '9') ++fmt;
+            }
+
+            // --- Precision (.digits, e.g. "%.2f") ---
             std::size_t precision = Policy::kDefaultFloatPrecision;
             if (*fmt == '.') {
                 ++fmt;
@@ -250,6 +271,15 @@ private:
                         break;
                     }
                 }
+            }
+
+            // --- Length modifier (ignored, but consumed) ---
+            // Handles: h, hh, l, ll, j, z, t, L
+            if (*fmt == 'h' || *fmt == 'l') {
+                const char first = *fmt++;
+                if (*fmt == first) ++fmt; // hh or ll
+            } else if (*fmt == 'j' || *fmt == 'z' || *fmt == 't' || *fmt == 'L') {
+                ++fmt;
             }
 
             switch (*fmt) {
