@@ -42,6 +42,25 @@ Usage: `#include "ffb/fixed_format_buffer.h"` and `ffb::FixedFormatBuffer<N>`.
 | Constants/macros  | UPPER_SNAKE_CASE | `MAX_FOOBAR_SIZE`           |
 | Files             | snake_case       | `foobar_class.cpp`          |
 
+## Variable Initialization
+
+Always use brace-initialization (`{}`) for all variable declarations — never `=`:
+
+```cpp
+// Correct
+std::size_t len{0U};
+const char first{*fmt++};
+FloatType abs_val{c.is_negative ? -value : value};
+Gadget dry{MakeCountingGadget()};
+
+// Wrong
+std::size_t len = 0U;
+const char first = *fmt++;
+```
+
+This applies to all local variables, parameters with default values, and `constexpr` constants.
+Member declarations that already use `{}` (e.g., `size_{0}`) are already compliant.
+
 ## Git Workflow
 
 ### Commit Message Format

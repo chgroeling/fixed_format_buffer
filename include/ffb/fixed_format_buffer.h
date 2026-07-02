@@ -133,8 +133,8 @@ private:
 
     /// Write an unsigned 64-bit integer in decimal.
     static void WriteUnsigned(Gadget& g, uint64_t value) noexcept {
-        char tmp[20]; // 2^64 needs at most 20 decimal digits
-        std::size_t len = 0U;
+        char tmp[20]{}; // 2^64 needs at most 20 decimal digits
+        std::size_t len{0U};
         if (value == 0ULL) { g.Put('0'); return; }
         while (value) {
             tmp[len++] = static_cast<char>('0' + value % 10U);
@@ -177,17 +177,17 @@ private:
     /// - Applies banker's rounding (round-half-to-even).
     /// - Handles carry-over when the fractional part rounds up to 10^precision.
     static FloatComponents GetComponents(FloatType value, std::size_t precision) noexcept {
-        FloatComponents c;
+        FloatComponents c{};
         c.is_negative = value < FloatType(0);
-        FloatType abs_val = c.is_negative ? -value : value;
+        FloatType abs_val{c.is_negative ? -value : value};
 
         c.integral = static_cast<int64_t>(abs_val);
-        FloatType scaled_remainder = (abs_val - static_cast<FloatType>(c.integral))
-                                     * kPow10Table[precision];
+        FloatType scaled_remainder{(abs_val - static_cast<FloatType>(c.integral))
+                                   * kPow10Table[precision]};
         c.fractional = static_cast<int64_t>(scaled_remainder);
 
-        FloatType remainder = scaled_remainder - static_cast<FloatType>(c.fractional);
-        constexpr FloatType kHalf = FloatType(0.5);
+        FloatType remainder{scaled_remainder - static_cast<FloatType>(c.fractional)};
+        constexpr FloatType kHalf{FloatType(0.5)};
 
         // Banker's rounding: round up if remainder > 0.5, or if == 0.5 and
         // the fractional part is odd (round-half-to-even).
@@ -206,8 +206,7 @@ private:
         // banker's rounding above never fires for the half-way case.
         // Re-apply it directly on the integral part.
         if (precision == 0U) {
-            remainder = abs_val - static_cast<FloatType>(c.integral);
-            if (remainder == kHalf && (c.integral & 1)) {
+            remainder = abs_val - static_cast<FloatType>(c.integral);            if (remainder == kHalf && (c.integral & 1)) {
                 ++c.integral;
             }
         }
@@ -221,7 +220,7 @@ private:
 
     static void WriteFloat(Gadget& g, FloatType value, std::size_t precision,
                            bool show_sign = false) noexcept {
-        constexpr FloatType kFloatMax = std::numeric_limits<FloatType>::max();
+        constexpr FloatType kFloatMax{std::numeric_limits<FloatType>::max()};
         if (value != value)    { WriteRaw(g, "nan",  3U); return; } // NaN — no sign
         if (value >  kFloatMax) {
             if (show_sign) g.Put('+');
@@ -230,7 +229,7 @@ private:
         if (value < -kFloatMax){ WriteRaw(g, "-inf", 4U); return; } // -inf
 
         // Guard: abs value >= 2^63 would overflow int64_t in GetComponents.
-        const FloatType abs_val = value < FloatType(0) ? -value : value;
+        const FloatType abs_val{value < FloatType(0) ? -value : value};
         if (abs_val >= kMaxSafeIntegral) {
             if (value < FloatType(0)) g.Put('-');
             else if (show_sign)       g.Put('+');
@@ -250,8 +249,8 @@ private:
             g.Put('.');
             // Build fractional digits right-to-left, emit left-to-right
             // so leading zeros are preserved.
-            char frac[kMaxFloatPrecision];
-            uint64_t tmp = static_cast<uint64_t>(c.fractional);
+            char frac[kMaxFloatPrecision]{};
+            uint64_t tmp{static_cast<uint64_t>(c.fractional)};
             for (std::size_t i = precision; i > 0U; --i) {
                 frac[i - 1U] = static_cast<char>('0' + tmp % 10U);
                 tmp /= 10U;
@@ -286,7 +285,7 @@ private:
             // --- Width (space-padded; left or right depending on justification) ---
             // First digit must be 1-9 (distinguishes width from flag '0'),
             // subsequent digits may include 0.
-            std::size_t width = 0U;
+            std::size_t width{0U};
             if (*fmt >= '1' && *fmt <= '9') {
                 width = static_cast<std::size_t>(*fmt++ - '0');
                 while (*fmt >= '0' && *fmt <= '9')
@@ -294,11 +293,10 @@ private:
             }
 
             // --- Precision (.digits, e.g. "%.2f") ---
-            std::size_t precision = Policy::kDefaultFloatPrecision;
+            std::size_t precision{Policy::kDefaultFloatPrecision};
             if (*fmt == '.') {
                 ++fmt;
-                precision = 0U;
-                while (*fmt >= '0' && *fmt <= '9') {
+                precision = 0U;                while (*fmt >= '0' && *fmt <= '9') {
                     precision = precision * 10U + static_cast<std::size_t>(*fmt++ - '0');
                     if (precision > kMaxFloatPrecision) {
                         precision = kMaxFloatPrecision;
@@ -311,7 +309,7 @@ private:
             // --- Length modifier (ignored, but consumed) ---
             // Handles: h, hh, l, ll, j, z, t, L
             if (*fmt == 'h' || *fmt == 'l') {
-                const char first = *fmt++;
+                const char first{*fmt++};
                 if (*fmt == first) ++fmt; // hh or ll
             } else if (*fmt == 'j' || *fmt == 'z' || *fmt == 't' || *fmt == 'L') {
                 ++fmt;
@@ -319,9 +317,9 @@ private:
 
             switch (*fmt) {
                 case 's': {
-                    const char* s = va_arg(args, const char*);
+                    const char* s{va_arg(args, const char*)};
                     if (width > 0U) {
-                        Gadget dry = MakeCountingGadget();
+                        Gadget dry{MakeCountingGadget()};
                         WriteString(dry, s);
                         if (!flags.left_justify) EmitPadding(g, width, dry.pos);
                         WriteString(g, s);
@@ -333,9 +331,9 @@ private:
                 }
                 case 'd':
                 case 'i': {
-                    const IntType v = va_arg(args, IntType);
+                    const IntType v{va_arg(args, IntType)};
                     if (width > 0U) {
-                        Gadget dry = MakeCountingGadget();
+                        Gadget dry{MakeCountingGadget()};
                         WriteInt(dry, v, flags.show_sign);
                         if (!flags.left_justify) EmitPadding(g, width, dry.pos);
                         WriteInt(g, v, flags.show_sign);
@@ -350,10 +348,10 @@ private:
                     // for policy-controlled precision.
                     // Always consume the argument to keep va_list aligned,
                     // but only format it when the policy permits.
-                    const FloatType v = static_cast<FloatType>(va_arg(args, double));
+                    const FloatType v{static_cast<FloatType>(va_arg(args, double))};
                     if constexpr (Policy::kSupportFloatingPointDecimals) {
                         if (width > 0U) {
-                            Gadget dry = MakeCountingGadget();
+                            Gadget dry{MakeCountingGadget()};
                             WriteFloat(dry, v, precision, flags.show_sign);
                             if (!flags.left_justify) EmitPadding(g, width, dry.pos);
                             WriteFloat(g, v, precision, flags.show_sign);
