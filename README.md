@@ -9,6 +9,29 @@ on the stack, as a class member, or in static memory.
 Formatted string views are transient and valid only until the buffer is
 modified, reused, or destroyed.
 
+## Motivation
+
+### Why not `snprintf`, `std::string`, or `{fmt}`?
+
+`sprintf`-family functions pull in a large code footprint, are not type-safe,
+and require manual buffer bounds-checking. `std::string` is absent in freestanding C++ and causes heap
+fragmentation under high-frequency use. `{fmt}` / `std::format` relies on heap
+allocations, exceptions, and substantial compile-time overhead.
+
+`FixedFormatBuffer` is a **single header**, zero heap, no exceptions —
+cache-friendly and deterministic.
+
+### Why no output?
+
+This is a pure formatting buffer, not an I/O layer. `View()` returns a
+null-terminated `string_view` — route it to UART, SPI, BLE, flash, or
+any other channel without a dependency on a specific HAL.
+
+### Movable
+
+The move constructor clears the source buffer to empty, preventing dangling
+`string_view` references. Safe in containers and factory functions.
+
 ## Features
 
 - Subset of `printf`-style formatting: `%c` `%s` `%d` `%i` `%u` `%x` `%f`
