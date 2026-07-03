@@ -12,6 +12,7 @@ using ffb::Int64Policy;
 struct NoFloat {
     static constexpr bool        kSupportFloatingPointDecimals = false;
     static constexpr std::size_t kDefaultFloatPrecision        = 6U;
+    static constexpr std::size_t kMaxFloatPrecision            = 6U;
     using IntType   = int32_t;
     using UIntType  = uint32_t;
     using FloatType = float;

@@ -53,6 +53,12 @@ struct AllFeatures {
     /// Must be in the range [0, kMaxFloatPrecision].
     static constexpr std::size_t kDefaultFloatPrecision = 6U;
 
+    /// Maximum decimal digits after the point for @c %f.
+    /// Explicit precision values above this limit are clamped.
+    /// The @c Pow10 lookup table is computed at compile time for this
+    /// range, so increasing this value carries a small code-size cost.
+    static constexpr std::size_t kMaxFloatPrecision = 6U;
+
     /// Type read from the va_list for the @c %i / @c %d specifier.
     /// Must be at least as wide as @c int (no implicit narrowing via va_arg).
     using IntType = int32_t;
@@ -78,6 +84,9 @@ struct Int64Policy {
 
     /// @copydoc AllFeatures::kDefaultFloatPrecision
     static constexpr std::size_t kDefaultFloatPrecision = 6U;
+
+    /// @copydoc AllFeatures::kMaxFloatPrecision
+    static constexpr std::size_t kMaxFloatPrecision = 6U;
 
     /// 64-bit signed integer type for @c %i / @c %d.
     using IntType = int64_t;
@@ -381,13 +390,12 @@ private:
         }
     }
 
-    static constexpr std::size_t kMaxFloatPrecision = 6U;
-
-    /// Powers of 10 indexed by precision (0 .. kMaxFloatPrecision).
-    static constexpr FloatType kPow10Table[] = {
-        FloatType(1), FloatType(10), FloatType(100), FloatType(1000),
-        FloatType(10000), FloatType(100000), FloatType(1000000)
-    };
+    /// Compute FloatType(10^n) at compile time (n <= kMaxFloatPrecision).
+    static constexpr FloatType Pow10(std::size_t n) noexcept {
+        FloatType result{FloatType(1)};
+        for (std::size_t i{0U}; i < n; ++i) { result = result * FloatType(10); }
+        return result;
+    }
 
     /// Integral and fractional decimal components of a floating-point value.
     struct FloatComponents {
@@ -410,7 +418,7 @@ private:
 
         c.integral = static_cast<int64_t>(abs_val);
         FloatType scaled_remainder{(abs_val - static_cast<FloatType>(c.integral))
-                                   * kPow10Table[precision]};
+                                   * Pow10(precision)};
         c.fractional = static_cast<int64_t>(scaled_remainder);
 
         FloatType remainder{scaled_remainder - static_cast<FloatType>(c.fractional)};
@@ -424,7 +432,7 @@ private:
         }
 
         // Carry: fractional rounded up to 10^precision → propagate to integral.
-        if (static_cast<FloatType>(c.fractional) >= kPow10Table[precision]) {
+        if (static_cast<FloatType>(c.fractional) >= Pow10(precision)) {
             c.fractional = 0;
             ++c.integral;
         }
@@ -468,7 +476,7 @@ private:
             return;
         }
 
-        if (precision > kMaxFloatPrecision) precision = kMaxFloatPrecision;
+        if (precision > Policy::kMaxFloatPrecision) precision = Policy::kMaxFloatPrecision;
 
         const FloatComponents c = GetComponents(value, precision);
 
@@ -481,7 +489,7 @@ private:
             g.Put('.');
             // Build fractional digits right-to-left, emit left-to-right
             // so leading zeros are preserved.
-            char frac[kMaxFloatPrecision]{};
+            char frac[Policy::kMaxFloatPrecision > 0U ? Policy::kMaxFloatPrecision : 1U]{};
             uint64_t tmp{static_cast<uint64_t>(c.fractional)};
             for (std::size_t i = precision; i > 0U; --i) {
                 frac[i - 1U] = static_cast<char>('0' + tmp % 10U);
@@ -594,15 +602,15 @@ private:
                     ++fmt;
                     const int p{va_arg(args, int)};
                     if (p < 0) precision = Policy::kDefaultFloatPrecision;
-                    else if (static_cast<std::size_t>(p) > kMaxFloatPrecision)
-                        precision = kMaxFloatPrecision;
+                    else if (static_cast<std::size_t>(p) > Policy::kMaxFloatPrecision)
+                        precision = Policy::kMaxFloatPrecision;
                     else precision = static_cast<std::size_t>(p);
                 } else {
                     precision = 0U;
                     while (*fmt >= '0' && *fmt <= '9') {
                         precision = precision * 10U + static_cast<std::size_t>(*fmt++ - '0');
-                        if (precision > kMaxFloatPrecision) {
-                            precision = kMaxFloatPrecision;
+                        if (precision > Policy::kMaxFloatPrecision) {
+                            precision = Policy::kMaxFloatPrecision;
                             while (*fmt >= '0' && *fmt <= '9') ++fmt; // drain remaining digits
                             break;
                         }
