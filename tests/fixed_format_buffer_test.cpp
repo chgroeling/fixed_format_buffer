@@ -178,6 +178,106 @@ TEST(FixedFormatBuffer, SecondFormatOverwritesPrevious) {
 }
 
 // ---------------------------------------------------------------------------
+// Length modifiers
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, LengthMod_hd_Short) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%hd", short(42));
+    EXPECT_EQ(buf.View(), "42");
+}
+
+TEST(FixedFormatBuffer, LengthMod_hd_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%hd", short(-1));
+    EXPECT_EQ(buf.View(), "-1");
+}
+
+TEST(FixedFormatBuffer, LengthMod_hhd_Char) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%hhd", static_cast<signed char>(-128));
+    EXPECT_EQ(buf.View(), "-128");
+}
+
+TEST(FixedFormatBuffer, LengthMod_ld_Long) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%ld", 42L);
+    EXPECT_EQ(buf.View(), "42");
+}
+
+TEST(FixedFormatBuffer, LengthMod_lld) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%lld", 42LL);
+    EXPECT_EQ(buf.View(), "42");
+}
+
+TEST(FixedFormatBuffer, LengthMod_hu) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%hu", static_cast<unsigned short>(255));
+    EXPECT_EQ(buf.View(), "255");
+}
+
+TEST(FixedFormatBuffer, LengthMod_lu) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%lu", 42UL);
+    EXPECT_EQ(buf.View(), "42");
+}
+
+TEST(FixedFormatBuffer, LengthMod_llu) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%llu", 42ULL);
+    EXPECT_EQ(buf.View(), "42");
+}
+
+TEST(FixedFormatBuffer, LengthMod_lx) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%lx", 0x2AUL);
+    EXPECT_EQ(buf.View(), "2a");
+}
+
+TEST(FixedFormatBuffer, LengthMod_llX) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%llX", 0xFFULL);
+    EXPECT_EQ(buf.View(), "FF");
+}
+
+TEST(FixedFormatBuffer, LengthMod_jd) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%jd", static_cast<intmax_t>(-1));
+    EXPECT_EQ(buf.View(), "-1");
+}
+
+TEST(FixedFormatBuffer, LengthMod_ju) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%ju", static_cast<uintmax_t>(42));
+    EXPECT_EQ(buf.View(), "42");
+}
+
+TEST(FixedFormatBuffer, LengthMod_zu) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%zu", static_cast<size_t>(100));
+    EXPECT_EQ(buf.View(), "100");
+}
+
+TEST(FixedFormatBuffer, LengthMod_td) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%td", static_cast<ptrdiff_t>(-7));
+    EXPECT_EQ(buf.View(), "-7");
+}
+
+TEST(FixedFormatBuffer, LengthMod_Lf) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.1Lf", static_cast<long double>(3.1L));
+    EXPECT_EQ(buf.View(), "3.1");
+}
+
+TEST(FixedFormatBuffer, LengthMod_Combined_FlagsAndLength) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%+#08llx", 0x2AULL);
+    EXPECT_EQ(buf.View(), "0x00002a");
+}
+
+// ---------------------------------------------------------------------------
 // Clear
 // ---------------------------------------------------------------------------
 

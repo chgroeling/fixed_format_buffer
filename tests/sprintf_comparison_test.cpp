@@ -273,6 +273,88 @@ TEST(SprintfComparison, HexUpper_AlternateForm_ZeroPad) {
 }
 
 // ---------------------------------------------------------------------------
+// Length modifiers
+// ---------------------------------------------------------------------------
+
+TEST(SprintfComparison, LengthMod_hd) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%hd", short(-1));
+    EXPECT_EQ(buf.View(), Ref("%hd", short(-1)));
+}
+
+TEST(SprintfComparison, LengthMod_hhd) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%hhd", static_cast<signed char>(-128));
+    EXPECT_EQ(buf.View(), Ref("%hhd", static_cast<signed char>(-128)));
+}
+
+TEST(SprintfComparison, LengthMod_ld) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%ld", 123456L);
+    EXPECT_EQ(buf.View(), Ref("%ld", 123456L));
+}
+
+TEST(SprintfComparison, LengthMod_lld) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%lld", 42LL);
+    EXPECT_EQ(buf.View(), Ref("%lld", 42LL));
+}
+
+TEST(SprintfComparison, LengthMod_hu) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%hu", static_cast<unsigned short>(42));
+    EXPECT_EQ(buf.View(), Ref("%hu", static_cast<unsigned short>(42)));
+}
+
+TEST(SprintfComparison, LengthMod_lu) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%lu", 42UL);
+    EXPECT_EQ(buf.View(), Ref("%lu", 42UL));
+}
+
+TEST(SprintfComparison, LengthMod_llu) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%llu", 12345ULL);
+    EXPECT_EQ(buf.View(), Ref("%llu", 12345ULL));
+}
+
+TEST(SprintfComparison, LengthMod_lx) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%lx", 0xABCDUL);
+    EXPECT_EQ(buf.View(), Ref("%lx", 0xABCDUL));
+}
+
+TEST(SprintfComparison, LengthMod_llX) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#llX", 0xFFULL);
+    EXPECT_EQ(buf.View(), Ref("%#llX", 0xFFULL));
+}
+
+TEST(SprintfComparison, LengthMod_zu) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%zu", static_cast<size_t>(100));
+    EXPECT_EQ(buf.View(), Ref("%zu", static_cast<size_t>(100)));
+}
+
+TEST(SprintfComparison, LengthMod_td) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%td", static_cast<ptrdiff_t>(-7));
+    EXPECT_EQ(buf.View(), Ref("%td", static_cast<ptrdiff_t>(-7)));
+}
+
+TEST(SprintfComparison, LengthMod_jd) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%jd", static_cast<intmax_t>(-42));
+    EXPECT_EQ(buf.View(), Ref("%jd", static_cast<intmax_t>(-42)));
+}
+
+TEST(SprintfComparison, LengthMod_Lf) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.1Lf", static_cast<long double>(3.1L));
+    EXPECT_EQ(buf.View(), Ref("%.1Lf", static_cast<long double>(3.1L)));
+}
+
+// ---------------------------------------------------------------------------
 // %u — unsigned decimal
 // ---------------------------------------------------------------------------
 

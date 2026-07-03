@@ -138,9 +138,9 @@ public:
     /// @note The @c - flag (left-align), @c + flag (always show sign),
     ///       @c 0 flag (zero-pad numeric values) and @c # flag (alternate form)
     ///       are supported.
-    ///       The @c   (space) flag and all length modifiers
-    ///       (@c h @c hh @c l @c ll @c j @c z @c t @c L) are parsed and silently
-    ///       ignored — they do not affect output.
+    ///       The @c   (space) flag is parsed and silently ignored.
+    ///       Length modifiers (@c h @c hh @c l @c ll @c j @c z @c t @c L)
+    ///       control the type read from the argument list and are fully supported.
     ///       Width produces space-padded output aligned according to the @c - flag,
     ///       or zero-padded for numeric specifiers when @c 0 is active.
     ///
@@ -188,6 +188,19 @@ private:
         bool show_sign      : 1;  ///< @c + flag: always emit a sign for numeric values
         bool zero_pad       : 1;  ///< @c 0 flag: zero-pad numeric values to width
         bool alternate_form : 1;  ///< @c # flag: prepend 0x for @c \%x, force point for @c \%f
+    };
+
+    /// Parsed length modifier (e.g. @c hh, @c l, @c ll, @c j, @c z, @c t, @c L).
+    enum class LengthMod : uint8_t {
+        None,
+        hh,  ///< @c hh — char / unsigned char
+        h,   ///< @c h  — short / unsigned short
+        l,   ///< @c l  — long / unsigned long
+        ll,  ///< @c ll — long long / unsigned long long
+        j,   ///< @c j  — intmax_t / uintmax_t
+        z,   ///< @c z  — size_t
+        t,   ///< @c t  — ptrdiff_t
+        L,   ///< @c L  — long double
     };
 
     // -------------------------------------------------------------------------
@@ -384,10 +397,47 @@ private:
     }
 
     // -------------------------------------------------------------------------
+    // Length-modifier-aware argument readers
+    // -------------------------------------------------------------------------
+
+    static IntType ReadSignedArg(va_list& args, LengthMod len) noexcept {
+        switch (len) {
+            case LengthMod::hh: return static_cast<IntType>(static_cast<signed char>(va_arg(args, int)));
+            case LengthMod::h:  return static_cast<IntType>(static_cast<short>(va_arg(args, int)));
+            case LengthMod::l:  return static_cast<IntType>(va_arg(args, long));
+            case LengthMod::ll: return static_cast<IntType>(va_arg(args, long long));
+            case LengthMod::j:  return static_cast<IntType>(va_arg(args, intmax_t));
+            case LengthMod::z:  return static_cast<IntType>(va_arg(args, size_t));
+            case LengthMod::t:  return static_cast<IntType>(va_arg(args, ptrdiff_t));
+            default:            return va_arg(args, IntType);
+        }
+    }
+
+    static UIntType ReadUnsignedArg(va_list& args, LengthMod len) noexcept {
+        switch (len) {
+            case LengthMod::hh: return static_cast<UIntType>(static_cast<unsigned char>(va_arg(args, int)));
+            case LengthMod::h:  return static_cast<UIntType>(static_cast<unsigned short>(va_arg(args, int)));
+            case LengthMod::l:  return static_cast<UIntType>(va_arg(args, unsigned long));
+            case LengthMod::ll: return static_cast<UIntType>(va_arg(args, unsigned long long));
+            case LengthMod::j:  return static_cast<UIntType>(va_arg(args, uintmax_t));
+            case LengthMod::z:  return static_cast<UIntType>(va_arg(args, size_t));
+            case LengthMod::t:  return static_cast<UIntType>(va_arg(args, ptrdiff_t));
+            default:            return va_arg(args, UIntType);
+        }
+    }
+
+    static FloatType ReadFloatArg(va_list& args, LengthMod len) noexcept {
+        if (len == LengthMod::L) {
+            return static_cast<FloatType>(va_arg(args, long double));
+        }
+        return static_cast<FloatType>(va_arg(args, double));
+    }
+
+    // -------------------------------------------------------------------------
     // Core format loop
     // -------------------------------------------------------------------------
 
-    std::size_t DoFormat(const char* fmt, va_list args) noexcept {
+    std::size_t DoFormat(const char* fmt, va_list& args) noexcept {
         Gadget g{buffer_.data(), 0U, N};
 
         while (*fmt) {
@@ -432,14 +482,20 @@ private:
                 }
             }
 
-            // --- Length modifier (ignored, but consumed) ---
-            // Handles: h, hh, l, ll, j, z, t, L
-            if (*fmt == 'h' || *fmt == 'l') {
-                const char first{*fmt++};
-                if (*fmt == first) ++fmt; // hh or ll
-            } else if (*fmt == 'j' || *fmt == 'z' || *fmt == 't' || *fmt == 'L') {
+            // --- Length modifier ---
+            LengthMod len_mod{LengthMod::None};
+            if (*fmt == 'h') {
                 ++fmt;
-            }
+                if (*fmt == 'h') { ++fmt; len_mod = LengthMod::hh; }
+                else len_mod = LengthMod::h;
+            } else if (*fmt == 'l') {
+                ++fmt;
+                if (*fmt == 'l') { ++fmt; len_mod = LengthMod::ll; }
+                else len_mod = LengthMod::l;
+            } else if (*fmt == 'j') { ++fmt; len_mod = LengthMod::j; }
+            else if (*fmt == 'z') { ++fmt; len_mod = LengthMod::z; }
+            else if (*fmt == 't') { ++fmt; len_mod = LengthMod::t; }
+            else if (*fmt == 'L') { ++fmt; len_mod = LengthMod::L; }
 
             switch (*fmt) {
                 case 'c': {
@@ -469,7 +525,7 @@ private:
                 }
                 case 'd':
                 case 'i': {
-                    const IntType v{va_arg(args, IntType)};
+                    const IntType v{ReadSignedArg(args, len_mod)};
                     if (width > 0U && flags.zero_pad && !flags.left_justify) {
                         Gadget dry{MakeCountingGadget()};
                         WriteInt(dry, v, flags.show_sign);
@@ -493,7 +549,7 @@ private:
                     // for policy-controlled precision.
                     // Always consume the argument to keep va_list aligned,
                     // but only format it when the policy permits.
-                    const FloatType v{static_cast<FloatType>(va_arg(args, double))};
+                    const FloatType v{ReadFloatArg(args, len_mod)};
                     if constexpr (Policy::kSupportFloatingPointDecimals) {
                         if (width > 0U && flags.zero_pad && !flags.left_justify) {
                             const bool is_normal{v == v &&
@@ -525,7 +581,7 @@ private:
                     break;
                 }
                 case 'u': {
-                    const UIntType v{va_arg(args, UIntType)};
+                    const UIntType v{ReadUnsignedArg(args, len_mod)};
                     if (width > 0U && flags.zero_pad && !flags.left_justify) {
                         Gadget dry{MakeCountingGadget()};
                         WriteUnsigned(dry, v);
@@ -543,7 +599,7 @@ private:
                     break;
                 }
                 case 'x': {
-                    const UIntType v{va_arg(args, UIntType)};
+                    const UIntType v{ReadUnsignedArg(args, len_mod)};
                     const bool use_prefix{flags.alternate_form && v != UIntType(0)};
                     if (width > 0U && flags.zero_pad && !flags.left_justify) {
                         Gadget dry{MakeCountingGadget()};
@@ -567,7 +623,7 @@ private:
                     break;
                 }
                 case 'X': {
-                    const UIntType v{va_arg(args, UIntType)};
+                    const UIntType v{ReadUnsignedArg(args, len_mod)};
                     const bool use_prefix{flags.alternate_form && v != UIntType(0)};
                     if (width > 0U && flags.zero_pad && !flags.left_justify) {
                         Gadget dry{MakeCountingGadget()};
