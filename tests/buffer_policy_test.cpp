@@ -75,25 +75,25 @@ TEST(BufferPolicy, NoFloatAllowsIntAndString) {
 
 TEST(BufferPolicy, Int64_Max) {
     FixedFormatBuffer<64, Int64Policy> buf;
-    buf.Format("%i", INT64_MAX);
+    buf.Format("%lli", INT64_MAX);
     EXPECT_EQ(buf.View(), "9223372036854775807");
 }
 
 TEST(BufferPolicy, Int64_Min) {
     FixedFormatBuffer<64, Int64Policy> buf;
-    buf.Format("%i", INT64_MIN);
+    buf.Format("%lli", INT64_MIN);
     EXPECT_EQ(buf.View(), "-9223372036854775808");
 }
 
 TEST(BufferPolicy, Int64_BeyondInt32Max) {
     FixedFormatBuffer<64, Int64Policy> buf;
-    buf.Format("%i", INT64_C(3000000000));
+    buf.Format("%lli", INT64_C(3000000000));
     EXPECT_EQ(buf.View(), "3000000000");
 }
 
 TEST(BufferPolicy, Int64_BeyondInt32Min) {
     FixedFormatBuffer<64, Int64Policy> buf;
-    buf.Format("%i", INT64_C(-3000000000));
+    buf.Format("%lli", INT64_C(-3000000000));
     EXPECT_EQ(buf.View(), "-3000000000");
 }
 
@@ -103,13 +103,13 @@ TEST(BufferPolicy, Int64_BeyondInt32Min) {
 
 TEST(BufferPolicy, Uint64_BeyondUint32Max) {
     FixedFormatBuffer<64, Int64Policy> buf;
-    buf.Format("%u", UINT64_C(5000000000));
+    buf.Format("%llu", UINT64_C(5000000000));
     EXPECT_EQ(buf.View(), "5000000000");
 }
 
 TEST(BufferPolicy, Uint64_Max) {
     FixedFormatBuffer<64, Int64Policy> buf;
-    buf.Format("%u", UINT64_C(18446744073709551615));
+    buf.Format("%llu", UINT64_C(18446744073709551615));
     EXPECT_EQ(buf.View(), "18446744073709551615");
 }
 
@@ -119,19 +119,19 @@ TEST(BufferPolicy, Uint64_Max) {
 
 TEST(BufferPolicy, Hex64_Large) {
     FixedFormatBuffer<64, Int64Policy> buf;
-    buf.Format("%x", UINT64_C(0xDEADBEEFCAFEBABE));
+    buf.Format("%llx", UINT64_C(0xDEADBEEFCAFEBABE));
     EXPECT_EQ(buf.View(), "deadbeefcafebabe");
 }
 
 TEST(BufferPolicy, Hex64_Max) {
     FixedFormatBuffer<64, Int64Policy> buf;
-    buf.Format("%x", UINT64_C(0xFFFFFFFFFFFFFFFF));
+    buf.Format("%llx", UINT64_C(0xFFFFFFFFFFFFFFFF));
     EXPECT_EQ(buf.View(), "ffffffffffffffff");
 }
 
 TEST(BufferPolicy, Hex64_ZeroPad) {
     FixedFormatBuffer<64, Int64Policy> buf;
-    buf.Format("%016x", UINT64_C(0xCAFE));
+    buf.Format("%016llx", UINT64_C(0xCAFE));
     EXPECT_EQ(buf.View(), "000000000000cafe");
 }
 

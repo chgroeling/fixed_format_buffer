@@ -504,7 +504,18 @@ private:
             case LengthMod::j:  return static_cast<IntType>(va_arg(args, intmax_t));
             case LengthMod::z:  return static_cast<IntType>(va_arg(args, size_t));
             case LengthMod::t:  return static_cast<IntType>(va_arg(args, ptrdiff_t));
-            default:            return va_arg(args, IntType);
+            default: {
+                // Without a length modifier the variadic argument undergoes
+                // default argument promotion to int.  We must read int to
+                // avoid a va_arg type mismatch on platforms where the
+                // policy's IntType is narrower than int (e.g. 16-bit int
+                // targets with IntType = int32_t).
+                //
+                // When IntType is wider than int (e.g. Int64Policy) the
+                // caller must supply a length modifier (%ld, %lld, …);
+                // otherwise the value is truncated to int-width.
+                return static_cast<IntType>(va_arg(args, int));
+            }
         }
     }
 
@@ -517,7 +528,12 @@ private:
             case LengthMod::j:  return static_cast<UIntType>(va_arg(args, uintmax_t));
             case LengthMod::z:  return static_cast<UIntType>(va_arg(args, size_t));
             case LengthMod::t:  return static_cast<UIntType>(va_arg(args, ptrdiff_t));
-            default:            return va_arg(args, UIntType);
+            default: {
+                // Without a length modifier the promoted type is unsigned int.
+                // Reading the policy's UIntType directly would cause a va_arg
+                // type mismatch when UIntType is not the same as unsigned int.
+                return static_cast<UIntType>(va_arg(args, unsigned int));
+            }
         }
     }
 
