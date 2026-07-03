@@ -150,6 +150,24 @@ TEST(SprintfComparison, Float_Large_Integral) {
     EXPECT_EQ(buf.View(), Ref("%.2f", 1024.25f));
 }
 
+TEST(SprintfComparison, Float_AlternateForm_ZeroPrecision) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#.0f", 42.0f);
+    EXPECT_EQ(buf.View(), Ref("%#.0f", 42.0f));
+}
+
+TEST(SprintfComparison, Float_AlternateForm_WithPrecision) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#.2f", 3.14f);
+    EXPECT_EQ(buf.View(), Ref("%#.2f", 3.14f));
+}
+
+TEST(SprintfComparison, Float_AlternateForm_Width_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#08.0f", 42.0f);
+    EXPECT_EQ(buf.View(), Ref("%#08.0f", 42.0f));
+}
+
 // ---------------------------------------------------------------------------
 // Mixed format strings
 // ---------------------------------------------------------------------------
@@ -198,6 +216,30 @@ TEST(SprintfComparison, Hex_Width_ZeroPad) {
     FixedFormatBuffer<64> buf;
     buf.Format("%08x", 0xffU);
     EXPECT_EQ(buf.View(), Ref("%08x", 0xffU));
+}
+
+TEST(SprintfComparison, Hex_AlternateForm) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#x", 0x2aU);
+    EXPECT_EQ(buf.View(), Ref("%#x", 0x2aU));
+}
+
+TEST(SprintfComparison, Hex_AlternateForm_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#x", 0U);
+    EXPECT_EQ(buf.View(), Ref("%#x", 0U));
+}
+
+TEST(SprintfComparison, Hex_AlternateForm_Width_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#08x", 0x2aU);
+    EXPECT_EQ(buf.View(), Ref("%#08x", 0x2aU));
+}
+
+TEST(SprintfComparison, Hex_AlternateForm_Width_RightJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#8x", 0x2aU);
+    EXPECT_EQ(buf.View(), Ref("%#8x", 0x2aU));
 }
 
 // ---------------------------------------------------------------------------

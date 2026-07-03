@@ -102,6 +102,42 @@ TEST(FixedFormatBuffer, FormatFloat_Zero) {
     EXPECT_EQ(buf.View(), "0.00");
 }
 
+TEST(FixedFormatBuffer, FormatFloat_AlternateForm_ZeroPrecision) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#.0f", 42.0f);
+    EXPECT_EQ(buf.View(), "42.");
+}
+
+TEST(FixedFormatBuffer, FormatFloat_AlternateForm_ZeroPrecision_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#.0f", -42.0f);
+    EXPECT_EQ(buf.View(), "-42.");
+}
+
+TEST(FixedFormatBuffer, FormatFloat_AlternateForm_WithPrecision) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#.2f", 3.14f);
+    EXPECT_EQ(buf.View(), "3.14");
+}
+
+TEST(FixedFormatBuffer, FormatFloat_AlternateForm_Width_RightJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#8.0f", 42.0f);
+    EXPECT_EQ(buf.View(), "     42.");
+}
+
+TEST(FixedFormatBuffer, FormatFloat_AlternateForm_Width_LeftJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#-8.0f", 42.0f);
+    EXPECT_EQ(buf.View(), "42.     ");
+}
+
+TEST(FixedFormatBuffer, FormatFloat_AlternateForm_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#08.0f", 42.0f);
+    EXPECT_EQ(buf.View(), "0000042.");
+}
+
 // ---------------------------------------------------------------------------
 // Format — mixed args and literal text
 // ---------------------------------------------------------------------------
@@ -527,6 +563,48 @@ TEST(FixedFormatBuffer, FormatHex_InSentence) {
     FixedFormatBuffer<64> buf;
     buf.Format("val=0x%x done", 0xffU);
     EXPECT_EQ(buf.View(), "val=0xff done");
+}
+
+TEST(FixedFormatBuffer, FormatHex_AlternateForm) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#x", 0x2aU);
+    EXPECT_EQ(buf.View(), "0x2a");
+}
+
+TEST(FixedFormatBuffer, FormatHex_AlternateForm_ZeroValue) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#x", 0U);
+    EXPECT_EQ(buf.View(), "0");
+}
+
+TEST(FixedFormatBuffer, FormatHex_AlternateForm_Width_RightJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#8x", 0x2aU);
+    EXPECT_EQ(buf.View(), "    0x2a");
+}
+
+TEST(FixedFormatBuffer, FormatHex_AlternateForm_Width_LeftJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#-8x", 0x2aU);
+    EXPECT_EQ(buf.View(), "0x2a    ");
+}
+
+TEST(FixedFormatBuffer, FormatHex_AlternateForm_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#08x", 0x2aU);
+    EXPECT_EQ(buf.View(), "0x00002a");
+}
+
+TEST(FixedFormatBuffer, FormatHex_AlternateForm_ZeroPad_ExactFit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#06x", 0x2aU);
+    EXPECT_EQ(buf.View(), "0x002a");
+}
+
+TEST(FixedFormatBuffer, FormatHex_AlternateForm_NarrowerThanContent) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#4x", 0x2afeU);
+    EXPECT_EQ(buf.View(), "0x2afe");
 }
 
 // ---------------------------------------------------------------------------
