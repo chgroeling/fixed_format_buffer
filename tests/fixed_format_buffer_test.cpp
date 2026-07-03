@@ -3,6 +3,15 @@
 #include <gtest/gtest.h>
 
 using ffb::FixedFormatBuffer;
+using ffb::Int64Policy;
+
+struct LongDoublePolicy {
+    static constexpr bool kSupportFloatingPointDecimals = true;
+    static constexpr std::size_t kDefaultFloatPrecision = 6U;
+    using IntType = int32_t;
+    using UIntType = uint32_t;
+    using FloatType = long double;
+};
 
 // ---------------------------------------------------------------------------
 // Construction
@@ -56,7 +65,7 @@ TEST(FixedFormatBuffer, FormatZero) {
 
 TEST(FixedFormatBuffer, FormatIntMin) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%i", -2147483648);
+    buf.Format("%i", int32_t(-2147483647 - 1));
     EXPECT_EQ(buf.View(), "-2147483648");
 }
 
@@ -66,39 +75,39 @@ TEST(FixedFormatBuffer, FormatIntMin) {
 
 TEST(FixedFormatBuffer, FormatFloat_DefaultPrecision) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%f", 3.14);
+    buf.Format("%f", 3.14f);
     EXPECT_EQ(buf.View(), "3.140000");
 }
 
 TEST(FixedFormatBuffer, FormatFloat_CustomPrecision) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.2f", 3.14159);
+    buf.Format("%.2f", 3.14159f);
     EXPECT_EQ(buf.View(), "3.14");
 }
 
 TEST(FixedFormatBuffer, FormatFloat_ZeroPrecision) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.0f", 2.7);
+    buf.Format("%.0f", 2.7f);
     EXPECT_EQ(buf.View(), "3");  // > 0.5, rounds up
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.0f", 2.5);
+    buf.Format("%.0f", 2.5f);
     EXPECT_EQ(buf.View(), "2");  // round-half-to-even: 2 is even
-    buf.Format("%.0f", 1.5);
+    buf.Format("%.0f", 1.5f);
     EXPECT_EQ(buf.View(), "2");  // round-half-to-even: 2 is even
 }
 
 TEST(FixedFormatBuffer, FormatFloat_Negative) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.2f", -1.5);
+    buf.Format("%.2f", -1.5f);
     EXPECT_EQ(buf.View(), "-1.50");
 }
 
 TEST(FixedFormatBuffer, FormatFloat_Zero) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.2f", 0.0);
+    buf.Format("%.2f", 0.0f);
     EXPECT_EQ(buf.View(), "0.00");
 }
 
@@ -200,13 +209,13 @@ TEST(FixedFormatBuffer, LengthMod_hhd_Char) {
 }
 
 TEST(FixedFormatBuffer, LengthMod_ld_Long) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%ld", 42L);
     EXPECT_EQ(buf.View(), "42");
 }
 
 TEST(FixedFormatBuffer, LengthMod_lld) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%lld", 42LL);
     EXPECT_EQ(buf.View(), "42");
 }
@@ -218,61 +227,61 @@ TEST(FixedFormatBuffer, LengthMod_hu) {
 }
 
 TEST(FixedFormatBuffer, LengthMod_lu) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%lu", 42UL);
     EXPECT_EQ(buf.View(), "42");
 }
 
 TEST(FixedFormatBuffer, LengthMod_llu) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%llu", 42ULL);
     EXPECT_EQ(buf.View(), "42");
 }
 
 TEST(FixedFormatBuffer, LengthMod_lx) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%lx", 0x2AUL);
     EXPECT_EQ(buf.View(), "2a");
 }
 
 TEST(FixedFormatBuffer, LengthMod_llX) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%llX", 0xFFULL);
     EXPECT_EQ(buf.View(), "FF");
 }
 
 TEST(FixedFormatBuffer, LengthMod_jd) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%jd", static_cast<intmax_t>(-1));
     EXPECT_EQ(buf.View(), "-1");
 }
 
 TEST(FixedFormatBuffer, LengthMod_ju) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%ju", static_cast<uintmax_t>(42));
     EXPECT_EQ(buf.View(), "42");
 }
 
 TEST(FixedFormatBuffer, LengthMod_zu) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%zu", static_cast<size_t>(100));
     EXPECT_EQ(buf.View(), "100");
 }
 
 TEST(FixedFormatBuffer, LengthMod_td) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%td", static_cast<ptrdiff_t>(-7));
     EXPECT_EQ(buf.View(), "-7");
 }
 
 TEST(FixedFormatBuffer, LengthMod_Lf) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, LongDoublePolicy> buf;
     buf.Format("%.1Lf", static_cast<long double>(3.1L));
     EXPECT_EQ(buf.View(), "3.1");
 }
 
 TEST(FixedFormatBuffer, LengthMod_Combined_FlagsAndLength) {
-    FixedFormatBuffer<64> buf;
+    FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%+#08llx", 0x2AULL);
     EXPECT_EQ(buf.View(), "0x00002a");
 }

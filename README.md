@@ -38,7 +38,9 @@ The move constructor clears the source buffer to empty, preventing dangling
 - Flags: `-` (left-justify), `+` (show sign), ` ` (space), `0` (zero-pad), `#` (alternate form)
 - Width and precision (including `*` from argument list)
 - Length modifiers: `hh` `h` `l` `ll` `j` `z` `t` `L`
-- Compile-time type checking — rejects `std::string` and other non-trivial types
+- Compile-time type checking — rejects `std::string`, types wider than the
+  policy (e.g. `double` with a `FloatType=float` policy, `long long` with a
+  32-bit policy), and other incompatible arguments
 - Configurable integer and unsigned types via policy template parameter
 - Header-only — single `#include "ffb/fixed_format_buffer.h"`
 - C++17
@@ -68,22 +70,35 @@ snapshot;    // → "sensor=7, temp=23.50 C"  (still valid)
 
 ## Custom policy types
 
-The default policy uses `int32_t` / `uint32_t`. For 64-bit values,
-define a custom policy:
+The default policy uses `int32_t` / `uint32_t`. A pre-built 64-bit policy
+(`ffb::Int64Policy`) is available.  You can also define your own policy
+to control the integer width, floating-point type, or to disable float
+support entirely (`kSupportFloatingPointDecimals = false`).
 
 ```cpp
-struct Int64Policy {
+// Built-in 64-bit policy:
+ffb::FixedFormatBuffer<32, ffb::Int64Policy> buf;
+buf.Format("%u", UINT64_C(18446744073709551615));
+// → "18446744073709551615"
+
+// Custom policy with double-precision floats:
+struct DoublePolicy {
     static constexpr bool        kSupportFloatingPointDecimals = true;
     static constexpr std::size_t kDefaultFloatPrecision        = 6U;
-    using IntType   = int64_t;
-    using UIntType  = uint64_t;
+    using IntType   = int32_t;
+    using UIntType  = uint32_t;
     using FloatType = double;
 };
 
-ffb::FixedFormatBuffer<32, Int64Policy> buf;
-buf.Format("%u", UINT64_C(18446744073709551615));
-// → "18446744073709551615"
+ffb::FixedFormatBuffer<64, DoublePolicy> buf2;
+buf2.Format("%.9f", 3.141592653589793);  // NOTE: precision capped at 6
 ```
+
+> **Note:** Passing types wider than the policy (e.g. `double` to a
+> `FloatType=float` policy, or `long long` to the default 32-bit policy)
+> is a compile-time error, not silent truncation. Use a matching policy
+> (like `ffb::Int64Policy` or a policy with `FloatType = double`) to accept
+> wider arguments.
 
 ## Building
 

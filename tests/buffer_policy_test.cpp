@@ -6,6 +6,7 @@
 
 using ffb::AllFeatures;
 using ffb::FixedFormatBuffer;
+using ffb::Int64Policy;
 
 // Local policy for tests — float disabled.
 struct NoFloat {
@@ -13,15 +14,6 @@ struct NoFloat {
     static constexpr std::size_t kDefaultFloatPrecision        = 6U;
     using IntType   = int32_t;
     using UIntType  = uint32_t;
-    using FloatType = float;
-};
-
-// Local policy with 64-bit types for large-value tests.
-struct Int64Policy {
-    static constexpr bool        kSupportFloatingPointDecimals = true;
-    static constexpr std::size_t kDefaultFloatPrecision        = 6U;
-    using IntType   = int64_t;
-    using UIntType  = uint64_t;
     using FloatType = float;
 };
 
@@ -50,7 +42,7 @@ TEST(BufferPolicy, NoFloatPolicyInstantiates) {
 
 TEST(BufferPolicy, AllFeaturesFormatsFloat) {
     FixedFormatBuffer<64, AllFeatures> buf;
-    buf.Format("%.2f", 3.14);
+    buf.Format("%.2f", 3.14f);
     EXPECT_EQ(buf.View(), "3.14");
 }
 
@@ -60,14 +52,14 @@ TEST(BufferPolicy, AllFeaturesFormatsFloat) {
 
 TEST(BufferPolicy, NoFloatSkipsFloatOutput) {
     FixedFormatBuffer<64, NoFloat> buf;
-    buf.Format("%f", 3.14);
+    buf.Format("%f", 3.14f);
     EXPECT_EQ(buf.View(), "");
 }
 
 TEST(BufferPolicy, NoFloatKeepsVaListAligned) {
     // %f is consumed silently; %s after it must still read the right arg.
     FixedFormatBuffer<64, NoFloat> buf;
-    buf.Format("%f %s", 1.0, "ok");
+    buf.Format("%f %s", 1.0f, "ok");
     EXPECT_EQ(buf.View(), " ok");
 }
 
@@ -144,30 +136,9 @@ TEST(BufferPolicy, Hex64_ZeroPad) {
 }
 
 // ---------------------------------------------------------------------------
-// 32-bit policy with out-of-range 64-bit arguments (truncation behaviour)
+// 32-bit policy rejects wider types at compile time (formerly UB truncation)
+//
+// Passing a 64-bit integer to the default 32-bit policy is a compile error:
+//   buf.Format("%i", INT64_C(42));  // sizeof(long long) > sizeof(int32_t)
+// Use Int64Policy (see above) or cast to the policy's IntType / UIntType.
 // ---------------------------------------------------------------------------
-
-TEST(BufferPolicy, DefaultPolicy_Int_FromInt64_ExceedsRange) {
-    // Passing a value wider than int32_t; only lower 32 bits are read by va_arg.
-    FixedFormatBuffer<64> buf;  // default policy: IntType = int32_t
-    buf.Format("%i", INT64_C(4294967297));  // 0x100000001, lower 32 bits = 1
-    EXPECT_EQ(buf.View(), "1");
-}
-
-TEST(BufferPolicy, DefaultPolicy_Int_FromInt64_NegativeOverflow) {
-    FixedFormatBuffer<64> buf;
-    buf.Format("%i", INT64_C(2147483648));  // INT32_MAX + 1, wraps to -2147483648
-    EXPECT_EQ(buf.View(), "-2147483648");
-}
-
-TEST(BufferPolicy, DefaultPolicy_Uint_FromUint64_ExceedsRange) {
-    FixedFormatBuffer<64> buf;
-    buf.Format("%u", UINT64_C(4294967296));  // 0x100000000, lower 32 bits = 0
-    EXPECT_EQ(buf.View(), "0");
-}
-
-TEST(BufferPolicy, DefaultPolicy_Hex_FromUint64_ExceedsRange) {
-    FixedFormatBuffer<64> buf;
-    buf.Format("%x", UINT64_C(0x123456789AB));  // > 32 bits, lower 32 bits = 0x456789AB
-    EXPECT_EQ(buf.View(), "456789ab");
-}

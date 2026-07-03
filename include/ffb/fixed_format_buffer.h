@@ -67,6 +67,28 @@ struct AllFeatures {
     using FloatType = float;
 };
 
+/// Policy with 64-bit integer support.
+///
+/// Use when formatting @c long, @c long long, @c size_t, @c ptrdiff_t,
+/// @c intmax_t, or @c uintmax_t arguments.  Inherits the float defaults
+/// from AllFeatures (FloatType = float, default precision = 6).
+struct Int64Policy {
+    /// @copydoc AllFeatures::kSupportFloatingPointDecimals
+    static constexpr bool kSupportFloatingPointDecimals = true;
+
+    /// @copydoc AllFeatures::kDefaultFloatPrecision
+    static constexpr std::size_t kDefaultFloatPrecision = 6U;
+
+    /// 64-bit signed integer type for @c %i / @c %d.
+    using IntType = int64_t;
+
+    /// 64-bit unsigned integer type for @c %x / @c %u.
+    using UIntType = uint64_t;
+
+    /// Internal floating-point type for @c %f.
+    using FloatType = float;
+};
+
 /// Allocation-free fixed-capacity formatting buffer.
 ///
 /// Usable on the stack, as a class member, or statically allocated.
@@ -77,12 +99,11 @@ struct AllFeatures {
 /// @tparam Policy Feature-flag policy struct.
 ///                Defaults to AllFeatures (all features enabled).
 ///
-/// @warning The formatter reads exactly the number of bits specified by
-///          the policy's type aliases via @c va_arg. Passing a value wider
-///          than the policy type (e.g. a 64-bit integer to a 32-bit policy)
-///          silently truncates to the lower bits. Use a custom policy with
-///          matching type aliases (e.g. IntType = int64_t) to handle wider
-///          values correctly.
+/// @warning Passing an integer type wider than the policy's IntType or
+///          UIntType (e.g. a 64-bit integer to a 32-bit policy) is rejected
+///          at compile time — such a mismatch would cause undefined behaviour
+///          in the variadic argument list.  Use a custom policy with matching
+///          type aliases (e.g. IntType = int64_t) to handle wider values.
 template <std::size_t N, typename Policy = AllFeatures>
 class FixedFormatBuffer {
 public:
@@ -189,7 +210,22 @@ public:
 private:
     // -------------------------------------------------------------------------
     // Compile-time argument type whitelist
+    //
+    // Integer arguments wider than the policy types (which would cause
+    // undefined behaviour when read by va_arg via the default no-modifier
+    // path) are rejected at compile time.  Use length modifiers (%ld,
+    // %lld, …) with a policy whose IntType/UIntType is at least as wide.
     // -------------------------------------------------------------------------
+    static constexpr std::size_t kMaxSafeArgSize =
+        (sizeof(typename Policy::IntType) > sizeof(typename Policy::UIntType))
+            ? sizeof(typename Policy::IntType)
+            : sizeof(typename Policy::UIntType);
+
+    /// Maximum safe width for floating-point arguments.
+    /// Rejects @c double when the policy uses @c float, etc.
+    static constexpr std::size_t kMaxSafeFloatSize =
+        sizeof(typename Policy::FloatType);
+
     template<typename T>
     static constexpr bool kIsValidFormatArg =
         std::is_same_v<T, char>              ||
@@ -199,13 +235,19 @@ private:
         std::is_same_v<T, unsigned short>    ||
         std::is_same_v<T, int>               ||
         std::is_same_v<T, unsigned int>      ||
-        std::is_same_v<T, long>              ||
-        std::is_same_v<T, unsigned long>     ||
-        std::is_same_v<T, long long>         ||
-        std::is_same_v<T, unsigned long long>||
+        std::is_same_v<T, int16_t>           ||
+        std::is_same_v<T, uint16_t>          ||
+        std::is_same_v<T, int32_t>           ||
+        std::is_same_v<T, uint32_t>          ||
+        (std::is_same_v<T, long>               && sizeof(long)               <= kMaxSafeArgSize) ||
+        (std::is_same_v<T, unsigned long>      && sizeof(unsigned long)      <= kMaxSafeArgSize) ||
+        (std::is_same_v<T, long long>          && sizeof(long long)          <= kMaxSafeArgSize) ||
+        (std::is_same_v<T, unsigned long long> && sizeof(unsigned long long) <= kMaxSafeArgSize) ||
+        (std::is_same_v<T, int64_t>             && sizeof(int64_t)           <= kMaxSafeArgSize) ||
+        (std::is_same_v<T, uint64_t>            && sizeof(uint64_t)          <= kMaxSafeArgSize) ||
         std::is_same_v<T, float>             ||
-        std::is_same_v<T, double>            ||
-        std::is_same_v<T, long double>       ||
+        (std::is_same_v<T, double>      && sizeof(double)      <= kMaxSafeFloatSize) ||
+        (std::is_same_v<T, long double> && sizeof(long double) <= kMaxSafeFloatSize) ||
         std::is_same_v<T, const char*>       ||
         std::is_same_v<T, char*>              ||
         std::is_same_v<T, std::nullptr_t>;

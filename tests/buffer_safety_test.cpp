@@ -1,6 +1,7 @@
 #include "ffb/fixed_format_buffer.h"
 
 #include <climits>
+#include <cstdint>
 #include <cstring>
 #include <string_view>
 
@@ -91,7 +92,7 @@ TEST(BufferSafety, NullTerminatorPresentAfterShortWrite) {
 
 TEST(BufferSafety, IntOverflow_SizeInvariant) {
     FixedFormatBuffer<3> buf;
-    buf.Format("%i", -2147483648);  // "-2147483648" = 11 chars > 3
+    buf.Format("%i", int32_t(-2147483647 - 1));  // "-2147483648" = 11 chars > 3
     EXPECT_LE(buf.Size(), buf.CAPACITY);
     EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
 }
@@ -120,7 +121,7 @@ TEST(BufferSafety, Sentinel_StringOverflow) {
 
 TEST(BufferSafety, Sentinel_IntOverflow) {
     Guarded<3> g;
-    g.buf.Format("%i", -2147483648);
+    g.buf.Format("%i", int32_t(-2147483647 - 1));
     g.CheckSentinels();
     EXPECT_LE(g.buf.Size(), 3u);
 }
