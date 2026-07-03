@@ -7,6 +7,7 @@
 #include <cstdint>
 #include <limits>
 #include <string_view>
+#include <type_traits>
 
 namespace ffb {
 
@@ -121,7 +122,9 @@ public:
         return *this;
     }
 
-    /// Format into the buffer using a subset of printf-style specifiers.
+    /// Type-safe format.  Only integral, floating-point, @c const @c char*,
+    /// and @c nullptr_t arguments are accepted — passing @c std::string
+    /// or other non-trivial types is rejected at compile time.
     ///
     /// Supported syntax: @c %[flags][width][.precision][length]specifier
     ///
@@ -157,12 +160,12 @@ public:
     ///
     /// Truncates silently if the result exceeds capacity.
     /// @return Number of characters written (excluding null terminator).
-    std::size_t Format(const char* fmt, ...) noexcept {
-        va_list args;
-        va_start(args, fmt);
-        size_ = DoFormat(fmt, args);
-        va_end(args);
-        return size_;
+    template<typename... Args>
+    std::size_t Format(const char* fmt, Args... args) noexcept {
+        static_assert((kIsValidFormatArg<Args> && ...),
+                      "Format argument type not supported. "
+                      "Use integer, floating-point, or const char* types.");
+        return FormatVa(fmt, args...);
     }
 
     /// Clear the buffer contents.
@@ -184,6 +187,38 @@ public:
     [[nodiscard]] bool Empty() const noexcept { return size_ == 0; }
 
 private:
+    // -------------------------------------------------------------------------
+    // Compile-time argument type whitelist
+    // -------------------------------------------------------------------------
+    template<typename T>
+    static constexpr bool kIsValidFormatArg =
+        std::is_same_v<T, char>              ||
+        std::is_same_v<T, signed char>       ||
+        std::is_same_v<T, unsigned char>     ||
+        std::is_same_v<T, short>             ||
+        std::is_same_v<T, unsigned short>    ||
+        std::is_same_v<T, int>               ||
+        std::is_same_v<T, unsigned int>      ||
+        std::is_same_v<T, long>              ||
+        std::is_same_v<T, unsigned long>     ||
+        std::is_same_v<T, long long>         ||
+        std::is_same_v<T, unsigned long long>||
+        std::is_same_v<T, float>             ||
+        std::is_same_v<T, double>            ||
+        std::is_same_v<T, long double>       ||
+        std::is_same_v<T, const char*>       ||
+        std::is_same_v<T, char*>              ||
+        std::is_same_v<T, std::nullptr_t>;
+
+    /// C-variadic bridge — called by the type-safe template Format().
+    std::size_t FormatVa(const char* fmt, ...) noexcept {
+        va_list args;
+        va_start(args, fmt);
+        size_ = DoFormat(fmt, args);
+        va_end(args);
+        return size_;
+    }
+
     // -------------------------------------------------------------------------
     // Policy-derived type aliases (used throughout the private implementation)
     // -------------------------------------------------------------------------

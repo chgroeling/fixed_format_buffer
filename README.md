@@ -35,9 +35,10 @@ The move constructor clears the source buffer to empty, preventing dangling
 ## Features
 
 - Subset of `printf`-style formatting: `%c` `%s` `%d` `%i` `%u` `%x` `%X` `%f`
-- Flags: `-` (left-justify), `+` (show sign), `0` (zero-pad), `#` (alternate form)
-- Width and precision (including `*` from argument list) for `%f`
+- Flags: `-` (left-justify), `+` (show sign), ` ` (space), `0` (zero-pad), `#` (alternate form)
+- Width and precision (including `*` from argument list)
 - Length modifiers: `hh` `h` `l` `ll` `j` `z` `t` `L`
+- Compile-time type checking — rejects `std::string` and other non-trivial types
 - Configurable integer and unsigned types via policy template parameter
 - Header-only — single `#include "ffb/fixed_format_buffer.h"`
 - C++17
