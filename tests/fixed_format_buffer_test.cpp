@@ -550,6 +550,52 @@ TEST(FixedFormatBuffer, LeftJustifyShowSign_Float_Negative) {
 }
 
 // ---------------------------------------------------------------------------
+// * width and precision
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, StarWidth_Int) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%*d", 6, 42);
+    EXPECT_EQ(buf.View(), "    42");
+}
+
+TEST(FixedFormatBuffer, StarWidth_Negative_LeftJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%*d", -6, 42);
+    EXPECT_EQ(buf.View(), "42    ");
+}
+
+TEST(FixedFormatBuffer, StarPrecision_Float) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.*f", 2, 3.14159f);
+    EXPECT_EQ(buf.View(), "3.14");
+}
+
+TEST(FixedFormatBuffer, StarWidthAndPrecision_Float) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%*.*f", 8, 2, 3.14159f);
+    EXPECT_EQ(buf.View(), "    3.14");
+}
+
+TEST(FixedFormatBuffer, StarWidthAndPrecision_LeftJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-*.*f", 8, 2, 3.14159f);
+    EXPECT_EQ(buf.View(), "3.14    ");
+}
+
+TEST(FixedFormatBuffer, StarPrecision_Negative_FallsBackToDefault) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.*f", -1, 3.14159f);
+    EXPECT_EQ(buf.View(), "3.141590");
+}
+
+TEST(FixedFormatBuffer, StarWidth_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%0*d", 6, 42);
+    EXPECT_EQ(buf.View(), "000042");
+}
+
+// ---------------------------------------------------------------------------
 // Space flag (' ')
 // ---------------------------------------------------------------------------
 

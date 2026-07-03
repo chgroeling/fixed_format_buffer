@@ -409,3 +409,31 @@ TEST(SprintfComparison, SpaceFlag_ZeroPad_Int) {
     buf.Format("% 06d", 42);
     EXPECT_EQ(buf.View(), Ref("% 06d", 42));
 }
+
+// ---------------------------------------------------------------------------
+// * width and precision
+// ---------------------------------------------------------------------------
+
+TEST(SprintfComparison, StarWidth_Int) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%*d", 6, 42);
+    EXPECT_EQ(buf.View(), Ref("%*d", 6, 42));
+}
+
+TEST(SprintfComparison, StarWidth_Negative_LeftJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%*d", -6, 42);
+    EXPECT_EQ(buf.View(), Ref("%*d", -6, 42));
+}
+
+TEST(SprintfComparison, StarPrecision_Float) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.*f", 2, 3.14159f);
+    EXPECT_EQ(buf.View(), Ref("%.*f", 2, 3.14159f));
+}
+
+TEST(SprintfComparison, StarWidthAndPrecision) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%*.*f", 8, 2, 3.14159f);
+    EXPECT_EQ(buf.View(), Ref("%*.*f", 8, 2, 3.14159f));
+}

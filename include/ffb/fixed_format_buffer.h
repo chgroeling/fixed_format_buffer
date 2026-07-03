@@ -151,6 +151,9 @@ public:
     ///
     ///       Width produces space-padded output aligned according to the @c - flag,
     ///       or zero-padded for numeric specifiers when @c 0 is active.
+    ///       Width and precision support the @c * notation (value read from the
+    ///       argument list).  A negative @c * width implies left-justification;
+    ///       a negative @c * precision is treated as if the precision were omitted.
     ///
     /// Truncates silently if the result exceeds capacity.
     /// @return Number of characters written (excluding null terminator).
@@ -476,24 +479,40 @@ private:
 
             // --- Width (space-padded; left or right depending on justification) ---
             // First digit must be 1-9 (distinguishes width from flag '0'),
-            // subsequent digits may include 0.
+            // subsequent digits may include 0.  '*' reads width from argument list.
             std::size_t width{0U};
-            if (*fmt >= '1' && *fmt <= '9') {
+            if (*fmt == '*') {
+                ++fmt;
+                const int w{va_arg(args, int)};
+                if (w < 0) { flags.left_justify = true; width = static_cast<std::size_t>(-w); }
+                else width = static_cast<std::size_t>(w);
+            } else if (*fmt >= '1' && *fmt <= '9') {
                 width = static_cast<std::size_t>(*fmt++ - '0');
                 while (*fmt >= '0' && *fmt <= '9')
                     width = width * 10U + static_cast<std::size_t>(*fmt++ - '0');
             }
 
             // --- Precision (.digits, e.g. "%.2f") ---
+            // '*' reads precision from argument list.
             std::size_t precision{Policy::kDefaultFloatPrecision};
             if (*fmt == '.') {
                 ++fmt;
-                precision = 0U;                while (*fmt >= '0' && *fmt <= '9') {
-                    precision = precision * 10U + static_cast<std::size_t>(*fmt++ - '0');
-                    if (precision > kMaxFloatPrecision) {
+                if (*fmt == '*') {
+                    ++fmt;
+                    const int p{va_arg(args, int)};
+                    if (p < 0) precision = Policy::kDefaultFloatPrecision;
+                    else if (static_cast<std::size_t>(p) > kMaxFloatPrecision)
                         precision = kMaxFloatPrecision;
-                        while (*fmt >= '0' && *fmt <= '9') ++fmt; // drain remaining digits
-                        break;
+                    else precision = static_cast<std::size_t>(p);
+                } else {
+                    precision = 0U;
+                    while (*fmt >= '0' && *fmt <= '9') {
+                        precision = precision * 10U + static_cast<std::size_t>(*fmt++ - '0');
+                        if (precision > kMaxFloatPrecision) {
+                            precision = kMaxFloatPrecision;
+                            while (*fmt >= '0' && *fmt <= '9') ++fmt; // drain remaining digits
+                            break;
+                        }
                     }
                 }
             }
