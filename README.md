@@ -34,8 +34,8 @@ The move constructor clears the source buffer to empty, preventing dangling
 
 ## Features
 
-- Subset of `printf`-style formatting: `%c` `%s` `%d` `%i` `%u` `%x` `%f`
-- Flags: `-` (left-justify), `+` (show sign), `0` (zero-pad)
+- Subset of `printf`-style formatting: `%c` `%s` `%d` `%i` `%u` `%x` `%X` `%f`
+- Flags: `-` (left-justify), `+` (show sign), `0` (zero-pad), `#` (alternate form)
 - Width and precision for `%f`
 - Configurable integer and unsigned types via policy template parameter
 - Header-only — single `#include "ffb/fixed_format_buffer.h"`
