@@ -136,9 +136,9 @@ public:
     ///             Optional precision: @c %.Nf  (default: @c Policy::kDefaultFloatPrecision).
     ///
     /// @note The @c - flag (left-align), @c + flag (always show sign),
+    ///       @c   (space) flag (prefix non-negative numbers with a space),
     ///       @c 0 flag (zero-pad numeric values) and @c # flag (alternate form)
     ///       are supported.
-    ///       The @c   (space) flag is parsed and silently ignored.
     ///
     ///       Length modifiers (@c h @c hh @c l @c ll @c j @c z @c t @c L)
     ///       control the type read from the argument list via @c va_arg.
@@ -194,6 +194,7 @@ private:
     struct FormatFlags {
         bool left_justify   : 1;  ///< @c - flag: pad on the right (left-justify content)
         bool show_sign      : 1;  ///< @c + flag: always emit a sign for numeric values
+        bool space_flag     : 1;  ///< @c (space) flag: prepend space for non-negative numbers
         bool zero_pad       : 1;  ///< @c 0 flag: zero-pad numeric values to width
         bool alternate_form : 1;  ///< @c # flag: prepend 0x for @c \%x, force point for @c \%f
     };
@@ -287,13 +288,15 @@ private:
         while (len) g.Put(tmp[--len]);
     }
 
-    static void WriteInt(Gadget& g, IntType value, bool show_sign = false) noexcept {
+    static void WriteInt(Gadget& g, IntType value, bool show_sign = false,
+                         bool space_flag = false) noexcept {
         if (value < IntType(0)) {
             g.Put('-');
             // Negate via uint64_t arithmetic to avoid UB on IntType's minimum value.
             WriteUnsigned(g, static_cast<uint64_t>(-(static_cast<int64_t>(value) + 1)) + 1ULL);
         } else {
             if (show_sign) g.Put('+');
+            else if (space_flag) g.Put(' ');
             WriteUnsigned(g, static_cast<uint64_t>(value));
         }
     }
@@ -364,11 +367,13 @@ private:
 
     static void WriteFloat(Gadget& g, FloatType value, std::size_t precision,
                            bool show_sign = false, bool emit_sign = true,
-                           bool alternate_form = false) noexcept {
+                           bool alternate_form = false,
+                           bool space_flag = false) noexcept {
         constexpr FloatType kFloatMax{std::numeric_limits<FloatType>::max()};
         if (value != value)    { WriteRaw(g, "nan",  3U); return; } // NaN — no sign
         if (value >  kFloatMax) {
             if (emit_sign && show_sign) g.Put('+');
+            else if (emit_sign && space_flag) g.Put(' ');
             WriteRaw(g, "inf",  3U); return;
         }
         if (value < -kFloatMax){ WriteRaw(g, "-inf", 4U); return; } // -inf
@@ -378,6 +383,7 @@ private:
         if (abs_val >= kMaxSafeIntegral) {
             if (emit_sign && value < FloatType(0)) g.Put('-');
             else if (emit_sign && show_sign)       g.Put('+');
+            else if (emit_sign && space_flag)      g.Put(' ');
             WriteRaw(g, "ovf", 3U);
             return;
         }
@@ -388,6 +394,7 @@ private:
 
         if (emit_sign && c.is_negative) g.Put('-');
         else if (emit_sign && show_sign) g.Put('+');
+        else if (emit_sign && space_flag && !c.is_negative) g.Put(' ');
         WriteUnsigned(g, static_cast<uint64_t>(c.integral));
 
         if (precision > 0U || alternate_form) {
@@ -461,6 +468,7 @@ private:
                    *fmt == '0' || *fmt == '#') {
                 if (*fmt == '-') flags.left_justify   = true;
                 if (*fmt == '+') flags.show_sign      = true;
+                if (*fmt == ' ') flags.space_flag      = true;
                 if (*fmt == '0') flags.zero_pad        = true;
                 if (*fmt == '#') flags.alternate_form  = true;
                 ++fmt;
@@ -536,19 +544,20 @@ private:
                     const IntType v{ReadSignedArg(args, len_mod)};
                     if (width > 0U && flags.zero_pad && !flags.left_justify) {
                         Gadget dry{MakeCountingGadget()};
-                        WriteInt(dry, v, flags.show_sign);
+                        WriteInt(dry, v, flags.show_sign, flags.space_flag);
                         if (v < IntType(0)) g.Put('-');
                         else if (flags.show_sign) g.Put('+');
+                        else if (flags.space_flag) g.Put(' ');
                         EmitPadding(g, width, dry.pos, '0');
                         WriteUnsigned(g, AbsAsU64(v));
                     } else if (width > 0U) {
                         Gadget dry{MakeCountingGadget()};
-                        WriteInt(dry, v, flags.show_sign);
+                        WriteInt(dry, v, flags.show_sign, flags.space_flag);
                         if (!flags.left_justify) EmitPadding(g, width, dry.pos);
-                        WriteInt(g, v, flags.show_sign);
+                        WriteInt(g, v, flags.show_sign, flags.space_flag);
                         if ( flags.left_justify) EmitPadding(g, width, dry.pos);
                     } else {
-                        WriteInt(g, v, flags.show_sign);
+                        WriteInt(g, v, flags.show_sign, flags.space_flag);
                     }
                     break;
                 }
@@ -565,25 +574,32 @@ private:
                                 v <=  std::numeric_limits<FloatType>::max() &&
                                 v > -kMaxSafeIntegral && v < kMaxSafeIntegral};
                             Gadget dry{MakeCountingGadget()};
-                            WriteFloat(dry, v, precision, flags.show_sign, true, flags.alternate_form);
+                            WriteFloat(dry, v, precision, flags.show_sign, true,
+                                       flags.alternate_form, flags.space_flag);
                             if (is_normal) {
                                 if (v < FloatType(0)) g.Put('-');
                                 else if (flags.show_sign) g.Put('+');
+                                else if (flags.space_flag) g.Put(' ');
                                 EmitPadding(g, width, dry.pos, '0');
-                                WriteFloat(g, v, precision, flags.show_sign, false, flags.alternate_form);
+                                WriteFloat(g, v, precision, flags.show_sign, false,
+                                           flags.alternate_form, flags.space_flag);
                             } else {
                                 if (!flags.left_justify) EmitPadding(g, width, dry.pos);
-                                WriteFloat(g, v, precision, flags.show_sign, true, flags.alternate_form);
+                                WriteFloat(g, v, precision, flags.show_sign, true,
+                                           flags.alternate_form, flags.space_flag);
                                 if ( flags.left_justify) EmitPadding(g, width, dry.pos);
                             }
                         } else if (width > 0U) {
                             Gadget dry{MakeCountingGadget()};
-                            WriteFloat(dry, v, precision, flags.show_sign, true, flags.alternate_form);
+                            WriteFloat(dry, v, precision, flags.show_sign, true,
+                                       flags.alternate_form, flags.space_flag);
                             if (!flags.left_justify) EmitPadding(g, width, dry.pos);
-                            WriteFloat(g, v, precision, flags.show_sign, true, flags.alternate_form);
+                            WriteFloat(g, v, precision, flags.show_sign, true,
+                                       flags.alternate_form, flags.space_flag);
                             if ( flags.left_justify) EmitPadding(g, width, dry.pos);
                         } else {
-                            WriteFloat(g, v, precision, flags.show_sign, true, flags.alternate_form);
+                            WriteFloat(g, v, precision, flags.show_sign, true,
+                                       flags.alternate_form, flags.space_flag);
                         }
                     }
                     break;

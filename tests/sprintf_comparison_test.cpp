@@ -375,3 +375,37 @@ TEST(SprintfComparison, Unsigned_Large) {
     buf.Format("%u", 0x7FFFFFFFU);
     EXPECT_EQ(buf.View(), Ref("%u", 0x7FFFFFFFU));
 }
+
+// ---------------------------------------------------------------------------
+// Space flag
+// ---------------------------------------------------------------------------
+
+TEST(SprintfComparison, SpaceFlag_Int) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% d", 42);
+    EXPECT_EQ(buf.View(), Ref("% d", 42));
+}
+
+TEST(SprintfComparison, SpaceFlag_Int_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% d", -7);
+    EXPECT_EQ(buf.View(), Ref("% d", -7));
+}
+
+TEST(SprintfComparison, SpaceFlag_Float) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% .1f", 3.1f);
+    EXPECT_EQ(buf.View(), Ref("% .1f", 3.1f));
+}
+
+TEST(SprintfComparison, SpaceFlag_OverriddenByShowSign) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% +d", 42);
+    EXPECT_EQ(buf.View(), Ref("% +d", 42));
+}
+
+TEST(SprintfComparison, SpaceFlag_ZeroPad_Int) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% 06d", 42);
+    EXPECT_EQ(buf.View(), Ref("% 06d", 42));
+}

@@ -550,6 +550,70 @@ TEST(FixedFormatBuffer, LeftJustifyShowSign_Float_Negative) {
 }
 
 // ---------------------------------------------------------------------------
+// Space flag (' ')
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, SpaceFlag_Int_Positive) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% d", 42);
+    EXPECT_EQ(buf.View(), " 42");
+}
+
+TEST(FixedFormatBuffer, SpaceFlag_Int_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% d", -7);
+    EXPECT_EQ(buf.View(), "-7");
+}
+
+TEST(FixedFormatBuffer, SpaceFlag_Int_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% d", 0);
+    EXPECT_EQ(buf.View(), " 0");
+}
+
+TEST(FixedFormatBuffer, SpaceFlag_OverriddenByShowSign_Int) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% +d", 42);
+    EXPECT_EQ(buf.View(), "+42");
+}
+
+TEST(FixedFormatBuffer, SpaceFlag_WithWidth_Int) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% 6d", 42);
+    EXPECT_EQ(buf.View(), "    42");
+}
+
+TEST(FixedFormatBuffer, SpaceFlag_WithZeroPad_Int) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% 06d", 42);
+    EXPECT_EQ(buf.View(), " 00042");
+}
+
+TEST(FixedFormatBuffer, SpaceFlag_Float_Positive) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% .1f", 3.1f);
+    EXPECT_EQ(buf.View(), " 3.1");
+}
+
+TEST(FixedFormatBuffer, SpaceFlag_Float_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% .1f", -3.1f);
+    EXPECT_EQ(buf.View(), "-3.1");
+}
+
+TEST(FixedFormatBuffer, SpaceFlag_Float_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% .1f", 0.0f);
+    EXPECT_EQ(buf.View(), " 0.0");
+}
+
+TEST(FixedFormatBuffer, SpaceFlag_OverriddenByShowSign_Float) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("% +.1f", 3.1f);
+    EXPECT_EQ(buf.View(), "+3.1");
+}
+
+// ---------------------------------------------------------------------------
 // Format — %c (character)
 // ---------------------------------------------------------------------------
 
