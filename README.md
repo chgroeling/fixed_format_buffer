@@ -13,7 +13,7 @@ modified, reused, or destroyed.
 
 ### Why not `snprintf`, `std::string`, or `{fmt}`?
 
-`sprintf`-family functions pull in a large code footprint, are not type-safe,
+`sprintf`-family functions pull in a large code footprint
 and require manual buffer bounds-checking. `std::string` is absent in freestanding C++ and causes heap
 fragmentation under high-frequency use. `{fmt}` / `std::format` relies on heap
 allocations, exceptions, and substantial compile-time overhead.
@@ -76,7 +76,7 @@ struct Int64Policy {
     static constexpr std::size_t kDefaultFloatPrecision        = 6U;
     using IntType   = int64_t;
     using UIntType  = uint64_t;
-    using FloatType = float;
+    using FloatType = double;
 };
 
 ffb::FixedFormatBuffer<32, Int64Policy> buf;
