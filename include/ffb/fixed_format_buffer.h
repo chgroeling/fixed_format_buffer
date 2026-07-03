@@ -139,8 +139,16 @@ public:
     ///       @c 0 flag (zero-pad numeric values) and @c # flag (alternate form)
     ///       are supported.
     ///       The @c   (space) flag is parsed and silently ignored.
+    ///
     ///       Length modifiers (@c h @c hh @c l @c ll @c j @c z @c t @c L)
-    ///       control the type read from the argument list and are fully supported.
+    ///       control the type read from the argument list via @c va_arg.
+    ///       The type is always read at the width indicated by the modifier
+    ///       to keep the variadic argument list aligned, and the resulting value
+    ///       is then cast to the policy's @c IntType / @c UIntType / @c FloatType
+    ///       for formatting.  This means the policy types determine the output
+    ///       range (values wider than the policy type are truncated), but the
+    ///       @c va_arg read itself is always safe regardless of policy width.
+    ///
     ///       Width produces space-padded output aligned according to the @c - flag,
     ///       or zero-padded for numeric specifiers when @c 0 is active.
     ///
