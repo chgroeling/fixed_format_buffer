@@ -242,6 +242,36 @@ TEST(SprintfComparison, Hex_AlternateForm_Width_RightJustify) {
     EXPECT_EQ(buf.View(), Ref("%#8x", 0x2aU));
 }
 
+TEST(SprintfComparison, HexUpper_Basic) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%X", 0x2afeU);
+    EXPECT_EQ(buf.View(), Ref("%X", 0x2afeU));
+}
+
+TEST(SprintfComparison, HexUpper_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%X", 0U);
+    EXPECT_EQ(buf.View(), Ref("%X", 0U));
+}
+
+TEST(SprintfComparison, HexUpper_Width_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%08X", 0x2aU);
+    EXPECT_EQ(buf.View(), Ref("%08X", 0x2aU));
+}
+
+TEST(SprintfComparison, HexUpper_AlternateForm) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#X", 0x2aU);
+    EXPECT_EQ(buf.View(), Ref("%#X", 0x2aU));
+}
+
+TEST(SprintfComparison, HexUpper_AlternateForm_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#08X", 0x2aU);
+    EXPECT_EQ(buf.View(), Ref("%#08X", 0x2aU));
+}
+
 // ---------------------------------------------------------------------------
 // %u — unsigned decimal
 // ---------------------------------------------------------------------------

@@ -608,6 +608,64 @@ TEST(FixedFormatBuffer, FormatHex_AlternateForm_NarrowerThanContent) {
 }
 
 // ---------------------------------------------------------------------------
+// Format — %X (uppercase hex)
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, FormatHexUpper_Basic) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%X", 0x2afeU);
+    EXPECT_EQ(buf.View(), "2AFE");
+}
+
+TEST(FixedFormatBuffer, FormatHexUpper_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%X", 0U);
+    EXPECT_EQ(buf.View(), "0");
+}
+
+TEST(FixedFormatBuffer, FormatHexUpper_Width_RightJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%8X", 0x2aU);
+    EXPECT_EQ(buf.View(), "      2A");
+}
+
+TEST(FixedFormatBuffer, FormatHexUpper_Width_LeftJustify) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%-8X", 0x2aU);
+    EXPECT_EQ(buf.View(), "2A      ");
+}
+
+TEST(FixedFormatBuffer, FormatHexUpper_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%08X", 0x2aU);
+    EXPECT_EQ(buf.View(), "0000002A");
+}
+
+TEST(FixedFormatBuffer, FormatHexUpper_AlternateForm) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#X", 0x2aU);
+    EXPECT_EQ(buf.View(), "0X2A");
+}
+
+TEST(FixedFormatBuffer, FormatHexUpper_AlternateForm_ZeroValue) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#X", 0U);
+    EXPECT_EQ(buf.View(), "0");
+}
+
+TEST(FixedFormatBuffer, FormatHexUpper_AlternateForm_ZeroPad) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%#08X", 0x2aU);
+    EXPECT_EQ(buf.View(), "0X00002A");
+}
+
+TEST(FixedFormatBuffer, FormatHexUpper_InSentence) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("val=%X done", 0xffU);
+    EXPECT_EQ(buf.View(), "val=FF done");
+}
+
+// ---------------------------------------------------------------------------
 // Format — %u (unsigned decimal)
 // ---------------------------------------------------------------------------
 

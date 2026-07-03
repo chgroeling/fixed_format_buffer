@@ -131,6 +131,7 @@ public:
     ///   - @c %d, @c %i  — signed decimal integer
     ///   - @c %u  — unsigned decimal integer
     ///   - @c %x  — hexadecimal unsigned integer (lowercase)
+    ///   - @c %X  — hexadecimal unsigned integer (uppercase)
     ///   - @c %f  — decimal float; only when @c Policy::kSupportFloatingPointDecimals is true.
     ///             Optional precision: @c %.Nf  (default: @c Policy::kDefaultFloatPrecision).
     ///
@@ -251,8 +252,10 @@ private:
         return static_cast<uint64_t>(value);
     }
 
-    static void WriteHex(Gadget& g, UIntType value) noexcept {
-        static constexpr char kDigits[] = "0123456789abcdef";
+    static void WriteHex(Gadget& g, UIntType value, bool uppercase = false) noexcept {
+        static constexpr char kDigitsLower[] = "0123456789abcdef";
+        static constexpr char kDigitsUpper[] = "0123456789ABCDEF";
+        const char* const kDigits{uppercase ? kDigitsUpper : kDigitsLower};
         char tmp[sizeof(UIntType) * 2]{};
         std::size_t len{0U};
         if (value == UIntType(0)) { g.Put('0'); return; }
@@ -560,6 +563,30 @@ private:
                     } else {
                         if (use_prefix) { g.Put('0'); g.Put('x'); }
                         WriteHex(g, v);
+                    }
+                    break;
+                }
+                case 'X': {
+                    const UIntType v{va_arg(args, UIntType)};
+                    const bool use_prefix{flags.alternate_form && v != UIntType(0)};
+                    if (width > 0U && flags.zero_pad && !flags.left_justify) {
+                        Gadget dry{MakeCountingGadget()};
+                        WriteHex(dry, v, true);
+                        const std::size_t content_len{dry.pos + (use_prefix ? 2U : 0U)};
+                        if (use_prefix) { g.Put('0'); g.Put('X'); }
+                        EmitPadding(g, width, content_len, '0');
+                        WriteHex(g, v, true);
+                    } else if (width > 0U) {
+                        Gadget dry{MakeCountingGadget()};
+                        if (use_prefix) { dry.Put('0'); dry.Put('X'); }
+                        WriteHex(dry, v, true);
+                        if (!flags.left_justify) EmitPadding(g, width, dry.pos);
+                        if (use_prefix) { g.Put('0'); g.Put('X'); }
+                        WriteHex(g, v, true);
+                        if ( flags.left_justify) EmitPadding(g, width, dry.pos);
+                    } else {
+                        if (use_prefix) { g.Put('0'); g.Put('X'); }
+                        WriteHex(g, v, true);
                     }
                     break;
                 }
