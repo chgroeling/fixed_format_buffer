@@ -9,6 +9,23 @@ on the stack, as a class member, or in static memory.
 For formatted output use `CStr()`, which returns a null-terminated `const char*`
 that always reflects the current buffer contents.
 
+## Features
+
+- Subset of `printf`-style formatting: `%c` `%s` `%d` `%i` `%u` `%x` `%X` `%f`
+- Flags: `-` (left-justify), `+` (show sign), ` ` (space), `0` (zero-pad), `#` (alternate form)
+- Width and precision (including `*` from argument list)
+- Length modifiers: `hh` `h` `l` `ll` `j` `z` `t` `L`
+- `Append()` — format and append without overwriting existing content
+- `Write()` — copy raw strings into the buffer without format parsing
+- `CStr()` — null-terminated `const char*` accessor
+- `operator==` / `operator!=` — compare against another buffer or `string_view`
+- Compile-time argument whitelist — rejects `std::string` and non-trivial types.
+  Integer types wider than the policy (e.g. `long long` with a 32-bit policy)
+  are rejected at compile time
+- Configurable integer and unsigned types via policy template parameter
+- Header-only — single `#include "ffb/fixed_format_buffer.h"`
+- C++17
+
 ## Motivation
 
 ### Why not `snprintf`, `std::string`, or `{fmt}`?
@@ -31,23 +48,6 @@ other channel without a dependency on a specific HAL.
 
 The move constructor clears the source buffer to empty. Safe in containers
 and factory functions.
-
-## Features
-
-- Subset of `printf`-style formatting: `%c` `%s` `%d` `%i` `%u` `%x` `%X` `%f`
-- Flags: `-` (left-justify), `+` (show sign), ` ` (space), `0` (zero-pad), `#` (alternate form)
-- Width and precision (including `*` from argument list)
-- Length modifiers: `hh` `h` `l` `ll` `j` `z` `t` `L`
-- `Append()` — format and append without overwriting existing content
-- `Write()` — copy raw strings into the buffer without format parsing
-- `CStr()` — null-terminated `const char*` accessor
-- `operator==` / `operator!=` — compare against another buffer or `string_view`
-- Compile-time argument whitelist — rejects `std::string` and non-trivial types.
-  Integer types wider than the policy (e.g. `long long` with a 32-bit policy)
-  are rejected at compile time
-- Configurable integer and unsigned types via policy template parameter
-- Header-only — single `#include "ffb/fixed_format_buffer.h"`
-- C++17
 
 ## Quick start
 
