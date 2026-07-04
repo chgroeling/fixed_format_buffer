@@ -126,11 +126,32 @@ buf2.Format("%.9f", 3.141592653589793);  // NOTE: precision capped at 6
 
 ## Building
 
-Requires CMake 3.15+, a C++17 compiler, and GoogleTest.
+### Header-only consumer (no build)
+
+The library is header-only. Copy `include/` into your project and add
+`#include "ffb/fixed_format_buffer.h"`. No compilation step required.
+
+### Conan (recommended)
+
+Prerequisites: Conan 2, CMake 3.15+, C++17 compiler.
 
 ```sh
-conan install . --build=missing
+# Install dependencies (GoogleTest, CMake) from Conan Center
+conan install . --output-folder=build --build=missing
+
+# Configure and build
 cmake --preset conan-debug
 cmake --build --preset conan-debug
+
+# Run tests
 ctest --preset conan-debug
+```
+
+### CMake without Conan
+
+```sh
+mkdir build && cd build
+cmake .. -DCMAKE_BUILD_TYPE=Debug
+cmake --build .
+ctest
 ```
