@@ -23,6 +23,9 @@ class FixedFormatBufferConan(ConanFile):
     def requirements(self):
         self.test_requires("gtest/1.14.0")
 
+    def build_requirements(self):
+        self.tool_requires("cmake/4.3.3")
+
     def generate(self):
         tc = CMakeToolchain(self)
         tc.generate()
