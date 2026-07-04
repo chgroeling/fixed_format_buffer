@@ -56,34 +56,34 @@ TEST(BufferSafety, SizeNeverExceedsCapacity) {
 TEST(BufferSafety, ViewSizeMatchesSize) {
     FixedFormatBuffer<4> buf;
     buf.Format("%s", "hello");
-    EXPECT_EQ(buf.View().size(), buf.Size());
+    EXPECT_EQ(buf.Size(), buf.Size());
 }
 
 TEST(BufferSafety, NullTerminatorAlwaysPresent) {
     // buffer_ has N+1 chars; buffer_[Size()] must always be '\0'.
     FixedFormatBuffer<4> buf;
     buf.Format("%s", "hello world");
-    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+    EXPECT_EQ(buf.CStr()[buf.Size()], '\0');
 }
 
 TEST(BufferSafety, ContentIsCorrectPrefix) {
     FixedFormatBuffer<4> buf;
     buf.Format("%s", "hello");
-    EXPECT_EQ(buf.View(), "hell");
+    EXPECT_STREQ(buf.CStr(), "hell");
     EXPECT_EQ(buf.Size(), 4u);
 }
 
 TEST(BufferSafety, NullTerminatorPresentAfterExactFit) {
     FixedFormatBuffer<5> buf;
     buf.Format("%s", "hello");  // exactly 5 chars = capacity
-    EXPECT_EQ(buf.View(), "hello");
-    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+    EXPECT_STREQ(buf.CStr(), "hello");
+    EXPECT_EQ(buf.CStr()[buf.Size()], '\0');
 }
 
 TEST(BufferSafety, NullTerminatorPresentAfterShortWrite) {
     FixedFormatBuffer<64> buf;
     buf.Format("%s", "hi");
-    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+    EXPECT_EQ(buf.CStr()[buf.Size()], '\0');
 }
 
 // ---------------------------------------------------------------------------
@@ -94,7 +94,7 @@ TEST(BufferSafety, IntOverflow_SizeInvariant) {
     FixedFormatBuffer<3> buf;
     buf.Format("%i", int32_t(-2147483647 - 1));  // "-2147483648" = 11 chars > 3
     EXPECT_LE(buf.Size(), buf.CAPACITY);
-    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+    EXPECT_EQ(buf.CStr()[buf.Size()], '\0');
 }
 
 // ---------------------------------------------------------------------------
@@ -105,7 +105,7 @@ TEST(BufferSafety, FloatOverflow_SizeInvariant) {
     FixedFormatBuffer<3> buf;
     buf.Format("%f", 3.14f);  // "3.140000" = 8 chars > 3
     EXPECT_LE(buf.Size(), buf.CAPACITY);
-    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+    EXPECT_EQ(buf.CStr()[buf.Size()], '\0');
 }
 
 // ---------------------------------------------------------------------------
@@ -153,8 +153,8 @@ TEST(BufferSafety, Reuse_LongToShort_NullTerminatorCorrect) {
     buf.Format("%s", "hi");               // size=2, buffer[2] must be '\0'
 
     EXPECT_EQ(buf.Size(), 2u);
-    EXPECT_EQ(buf.View(), "hi");
-    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+    EXPECT_STREQ(buf.CStr(), "hi");
+    EXPECT_EQ(buf.CStr()[buf.Size()], '\0');
 }
 
 // Short → long (fits): null terminator moves forward.
@@ -164,8 +164,8 @@ TEST(BufferSafety, Reuse_ShortToLong_NullTerminatorCorrect) {
     buf.Format("%s", "hello");            // size=5, buffer[5] must be '\0'
 
     EXPECT_EQ(buf.Size(), 5u);
-    EXPECT_EQ(buf.View(), "hello");
-    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+    EXPECT_STREQ(buf.CStr(), "hello");
+    EXPECT_EQ(buf.CStr()[buf.Size()], '\0');
 }
 
 // Long → truncated: null terminator lands exactly at CAPACITY.
@@ -175,8 +175,8 @@ TEST(BufferSafety, Reuse_LongToTruncated_NullTerminatorAtCapacity) {
     buf.Format("%s", "hello world");      // truncated to 4, buffer[4] must be '\0'
 
     EXPECT_EQ(buf.Size(), 4u);
-    EXPECT_EQ(buf.View(), "hell");
-    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+    EXPECT_STREQ(buf.CStr(), "hell");
+    EXPECT_EQ(buf.CStr()[buf.Size()], '\0');
 }
 
 // Any → empty: null terminator must be at position 0.
@@ -187,7 +187,7 @@ TEST(BufferSafety, Reuse_ToEmpty_NullTerminatorAtZero) {
 
     EXPECT_EQ(buf.Size(), 0u);
     EXPECT_TRUE(buf.Empty());
-    EXPECT_EQ(buf.View().data()[0], '\0');
+    EXPECT_EQ(buf.CStr()[0], '\0');
 }
 
 // ---------------------------------------------------------------------------
@@ -201,20 +201,20 @@ TEST(BufferSafety, ExactFill_String_NullTerminatorAtN) {
     FixedFormatBuffer<5> buf;
     buf.Format("%s", "hello");            // exactly 5 chars = N
     EXPECT_EQ(buf.Size(), 5u);
-    EXPECT_EQ(buf.View(), "hello");
-    EXPECT_EQ(buf.View().data()[5], '\0'); // buffer_[N] must be '\0'
+    EXPECT_STREQ(buf.CStr(), "hello");
+    EXPECT_EQ(buf.CStr()[5], '\0'); // buffer_[N] must be '\0'
 }
 
 TEST(BufferSafety, ExactFill_Int_NullTerminatorAtN) {
     FixedFormatBuffer<3> buf;
     buf.Format("%i", 42);                 // "42" = 2 chars < 3; use 999 → 3 chars
     // First verify 2-char case (sanity)
-    EXPECT_EQ(buf.View().data()[buf.Size()], '\0');
+    EXPECT_EQ(buf.CStr()[buf.Size()], '\0');
 
     buf.Format("%i", 999);               // exactly 3 chars = N
     EXPECT_EQ(buf.Size(), 3u);
-    EXPECT_EQ(buf.View(), "999");
-    EXPECT_EQ(buf.View().data()[3], '\0');
+    EXPECT_STREQ(buf.CStr(), "999");
+    EXPECT_EQ(buf.CStr()[3], '\0');
 }
 
 TEST(BufferSafety, ExactFill_Float_NullTerminatorAtN) {
@@ -222,8 +222,8 @@ TEST(BufferSafety, ExactFill_Float_NullTerminatorAtN) {
     FixedFormatBuffer<4> buf;
     buf.Format("%.2f", 1.5f);            // exactly 4 chars = N
     EXPECT_EQ(buf.Size(), 4u);
-    EXPECT_EQ(buf.View(), "1.50");
-    EXPECT_EQ(buf.View().data()[4], '\0');
+    EXPECT_STREQ(buf.CStr(), "1.50");
+    EXPECT_EQ(buf.CStr()[4], '\0');
 }
 
 TEST(BufferSafety, ExactFill_AfterShorterWrite_NullTerminatorAtN) {
@@ -231,8 +231,8 @@ TEST(BufferSafety, ExactFill_AfterShorterWrite_NullTerminatorAtN) {
     buf.Format("%s", "hi");              // size=2, buffer[2]='\0'
     buf.Format("%s", "hello");           // size=5=N, buffer[5] must be '\0'
     EXPECT_EQ(buf.Size(), 5u);
-    EXPECT_EQ(buf.View(), "hello");
-    EXPECT_EQ(buf.View().data()[5], '\0');
+    EXPECT_STREQ(buf.CStr(), "hello");
+    EXPECT_EQ(buf.CStr()[5], '\0');
 }
 
 // ---------------------------------------------------------------------------
@@ -243,32 +243,32 @@ TEST(BufferSafety, IntLongerThanBuffer_PositiveOverflow) {
     FixedFormatBuffer<3> buf;
     buf.Format("%i", 12345);     // "12345" = 5 chars > 3
     EXPECT_EQ(buf.Size(), 3u);
-    EXPECT_EQ(buf.View(), "123");
-    EXPECT_EQ(buf.View().data()[3], '\0');
+    EXPECT_STREQ(buf.CStr(), "123");
+    EXPECT_EQ(buf.CStr()[3], '\0');
 }
 
 TEST(BufferSafety, IntLongerThanBuffer_NegativeOverflow) {
     FixedFormatBuffer<3> buf;
     buf.Format("%i", -1234);     // "-1234" = 5 chars > 3
     EXPECT_EQ(buf.Size(), 3u);
-    EXPECT_EQ(buf.View(), "-12");
-    EXPECT_EQ(buf.View().data()[3], '\0');
+    EXPECT_STREQ(buf.CStr(), "-12");
+    EXPECT_EQ(buf.CStr()[3], '\0');
 }
 
 TEST(BufferSafety, IntLongerThanBuffer_OnlySignFits) {
     FixedFormatBuffer<1> buf;
     buf.Format("%i", -99);       // "-99" = 3 chars; only '-' fits
     EXPECT_EQ(buf.Size(), 1u);
-    EXPECT_EQ(buf.View(), "-");
-    EXPECT_EQ(buf.View().data()[1], '\0');
+    EXPECT_STREQ(buf.CStr(), "-");
+    EXPECT_EQ(buf.CStr()[1], '\0');
 }
 
 TEST(BufferSafety, IntLongerThanBuffer_NothingFits) {
     FixedFormatBuffer<0> buf;
     buf.Format("%i", 42);        // no room at all; buffer_[0] must be '\0'
     EXPECT_EQ(buf.Size(), 0u);
-    EXPECT_EQ(buf.View(), "");
-    EXPECT_EQ(buf.View().data()[0], '\0');
+    EXPECT_STREQ(buf.CStr(), "");
+    EXPECT_EQ(buf.CStr()[0], '\0');
 }
 
 // ---------------------------------------------------------------------------
@@ -279,54 +279,54 @@ TEST(BufferSafety, FloatLongerThanBuffer_TruncatesDigits) {
     FixedFormatBuffer<3> buf;
     buf.Format("%.2f", 3.14f);   // "3.14" = 4 chars > 3
     EXPECT_EQ(buf.Size(), 3u);
-    EXPECT_EQ(buf.View(), "3.1");
-    EXPECT_EQ(buf.View().data()[3], '\0');
+    EXPECT_STREQ(buf.CStr(), "3.1");
+    EXPECT_EQ(buf.CStr()[3], '\0');
 }
 
 TEST(BufferSafety, FloatLongerThanBuffer_TruncatesAfterDecimalPoint) {
     FixedFormatBuffer<2> buf;
     buf.Format("%.2f", 3.14f);   // "3.14" = 4 chars; only "3." fits
     EXPECT_EQ(buf.Size(), 2u);
-    EXPECT_EQ(buf.View(), "3.");
-    EXPECT_EQ(buf.View().data()[2], '\0');
+    EXPECT_STREQ(buf.CStr(), "3.");
+    EXPECT_EQ(buf.CStr()[2], '\0');
 }
 
 TEST(BufferSafety, FloatLongerThanBuffer_TruncatesBeforeDecimalPoint) {
     FixedFormatBuffer<1> buf;
     buf.Format("%.2f", 3.14f);   // only "3" fits
     EXPECT_EQ(buf.Size(), 1u);
-    EXPECT_EQ(buf.View(), "3");
-    EXPECT_EQ(buf.View().data()[1], '\0');
+    EXPECT_STREQ(buf.CStr(), "3");
+    EXPECT_EQ(buf.CStr()[1], '\0');
 }
 
 TEST(BufferSafety, FloatLongerThanBuffer_NegativeSign) {
     FixedFormatBuffer<3> buf;
     buf.Format("%.2f", -3.14f);  // "-3.14" = 5 chars > 3
     EXPECT_EQ(buf.Size(), 3u);
-    EXPECT_EQ(buf.View(), "-3.");
-    EXPECT_EQ(buf.View().data()[3], '\0');
+    EXPECT_STREQ(buf.CStr(), "-3.");
+    EXPECT_EQ(buf.CStr()[3], '\0');
 }
 
 TEST(BufferSafety, IntLongerThanBuffer_OnlySignSurvives) {
     FixedFormatBuffer<1> buf;
     buf.Format("%i", -42);       // "-42" = 3 chars; only '-' fits in N=1
     EXPECT_EQ(buf.Size(), 1u);
-    EXPECT_EQ(buf.View(), "-");
-    EXPECT_EQ(buf.View().data()[1], '\0');
+    EXPECT_STREQ(buf.CStr(), "-");
+    EXPECT_EQ(buf.CStr()[1], '\0');
 }
 
 TEST(BufferSafety, FloatLongerThanBuffer_OnlySignSurvives) {
     FixedFormatBuffer<1> buf;
     buf.Format("%.2f", -3.14f);  // "-3.14" = 5 chars; only '-' fits in N=1
     EXPECT_EQ(buf.Size(), 1u);
-    EXPECT_EQ(buf.View(), "-");
-    EXPECT_EQ(buf.View().data()[1], '\0');
+    EXPECT_STREQ(buf.CStr(), "-");
+    EXPECT_EQ(buf.CStr()[1], '\0');
 }
 
 TEST(BufferSafety, FloatLongerThanBuffer_NothingFits) {
     FixedFormatBuffer<0> buf;
     buf.Format("%.2f", -3.14f);  // no room at all; buffer_[0] must be '\0'
     EXPECT_EQ(buf.Size(), 0u);
-    EXPECT_EQ(buf.View(), "");
-    EXPECT_EQ(buf.View().data()[0], '\0');
+    EXPECT_STREQ(buf.CStr(), "");
+    EXPECT_EQ(buf.CStr()[0], '\0');
 }

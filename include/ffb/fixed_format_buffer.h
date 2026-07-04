@@ -152,9 +152,18 @@ public:
         return *this;
     }
 
-    /// Type-safe format.  Only integral, floating-point, @c const @c char*,
-    /// and @c nullptr_t arguments are accepted — passing @c std::string
-    /// or other non-trivial types is rejected at compile time.
+    /// Variadic format. All arguments must be integral, floating-point,
+    /// @c const @c char*, @c char*, or @c std::nullptr_t — passing
+    /// @c std::string or other non-trivial types is rejected at compile
+    /// time. Integer types wider than the policy's @c IntType / @c UIntType
+    /// are also rejected.
+    ///
+    /// @note This check only validates that argument <em>kinds</em> are
+    ///       compatible with the variadic argument list. It does @em not
+    ///       verify that each argument matches its corresponding format
+    ///       specifier — passing a @c float to @c %d or an @c int to
+    ///       @c %s is still undefined behaviour. The caller is responsible
+    ///       for ensuring that argument types and format specifiers match.
     ///
     /// Supported syntax: @c %[flags][width][.precision][length]specifier
     ///
@@ -204,12 +213,6 @@ public:
         size_ = 0;
     }
 
-    /// Return a string_view over the current contents.
-    /// Valid only until the buffer is modified or destroyed.
-    [[nodiscard]] std::string_view View() const noexcept {
-        return {buffer_.data(), size_};
-    }
-
     /// Return the number of characters currently stored.
     [[nodiscard]] std::size_t Size() const noexcept { return size_; }
 
@@ -254,7 +257,7 @@ public:
         return size_;
     }
 
-    /// Type-safe append format. Like Format() but appends to existing
+    /// Append format. Like Format() but appends to existing
     /// content instead of overwriting.
     /// @see Format()
     template<typename... Args>
@@ -267,7 +270,7 @@ public:
 
     friend bool operator==(const FixedFormatBuffer& a,
                            const FixedFormatBuffer& b) noexcept {
-        return a.View() == b.View();
+        return std::string_view{a.CStr()} == std::string_view{b.CStr()};
     }
     friend bool operator!=(const FixedFormatBuffer& a,
                            const FixedFormatBuffer& b) noexcept {
@@ -275,19 +278,19 @@ public:
     }
     friend bool operator==(const FixedFormatBuffer& buf,
                            std::string_view sv) noexcept {
-        return buf.View() == sv;
+        return std::string_view{buf.CStr()} == sv;
     }
     friend bool operator==(std::string_view sv,
                            const FixedFormatBuffer& buf) noexcept {
-        return sv == buf.View();
+        return sv == std::string_view{buf.CStr()};
     }
     friend bool operator!=(const FixedFormatBuffer& buf,
                            std::string_view sv) noexcept {
-        return buf.View() != sv;
+        return std::string_view{buf.CStr()} != sv;
     }
     friend bool operator!=(std::string_view sv,
                            const FixedFormatBuffer& buf) noexcept {
-        return sv != buf.View();
+        return sv != std::string_view{buf.CStr()};
     }
 
 private:
@@ -335,7 +338,7 @@ private:
         std::is_same_v<T, char*>              ||
         std::is_same_v<T, std::nullptr_t>;
 
-    /// C-variadic bridge — called by the type-safe template Format().
+    /// C-variadic bridge — called by the template Format().
     std::size_t FormatVa(const char* fmt, ...) noexcept {
         va_list args;
         va_start(args, fmt);
@@ -344,7 +347,7 @@ private:
         return size_;
     }
 
-    /// C-variadic bridge — called by the type-safe template Append().
+    /// C-variadic bridge — called by the template Append().
     std::size_t AppendVa(const char* fmt, ...) noexcept {
         va_list args;
         va_start(args, fmt);

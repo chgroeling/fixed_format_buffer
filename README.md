@@ -6,8 +6,8 @@ No heap, no exceptions, no recursion — suitable for bare-metal and RTOS
 environments where `malloc` is unavailable or forbidden. The buffer lives
 on the stack, as a class member, or in static memory.
 
-Formatted string views are transient and valid only until the buffer is
-modified, reused, or destroyed.
+For formatted output use `CStr()`, which returns a null-terminated `const char*`
+that always reflects the current buffer contents.
 
 ## Motivation
 
@@ -23,15 +23,14 @@ cache-friendly and deterministic.
 
 ### Why no output?
 
-This is a pure formatting buffer, not an I/O layer. `View()` returns a
-`string_view`, `CStr()` returns a null-terminated `const char*` — route it
-to UART, SPI, BLE, flash, or any other channel without a dependency on a
-specific HAL.
+This is a pure formatting buffer, not an I/O layer. `CStr()` returns a
+null-terminated `const char*` — route it to UART, SPI, BLE, flash, or any
+other channel without a dependency on a specific HAL.
 
 ### Movable
 
-The move constructor clears the source buffer to empty, preventing dangling
-`string_view` references. Safe in containers and factory functions.
+The move constructor clears the source buffer to empty. Safe in containers
+and factory functions.
 
 ## Features
 
@@ -43,9 +42,9 @@ The move constructor clears the source buffer to empty, preventing dangling
 - `Write()` — copy raw strings into the buffer without format parsing
 - `CStr()` — null-terminated `const char*` accessor
 - `operator==` / `operator!=` — compare against another buffer or `string_view`
-- Compile-time type checking — rejects `std::string`, types wider than the
-  policy (e.g. `double` with a `FloatType=float` policy, `long long` with a
-  32-bit policy), and other incompatible arguments
+- Compile-time argument whitelist — rejects `std::string` and non-trivial types.
+  Integer types wider than the policy (e.g. `long long` with a 32-bit policy)
+  are rejected at compile time
 - Configurable integer and unsigned types via policy template parameter
 - Header-only — single `#include "ffb/fixed_format_buffer.h"`
 - C++17
@@ -58,12 +57,19 @@ The move constructor clears the source buffer to empty, preventing dangling
 ffb::FixedFormatBuffer<64> buf;               // 64-char capacity on the stack
 
 buf.Format("sensor=%d, temp=%.2f C", 7, 23.5f);
-buf.View();  // → "sensor=7, temp=23.50 C"
-
-// View() returns a string_view into the buffer. It is invalidated
-// by the next Format() call, Clear(), or when the buffer goes out of scope.
-// For a null-terminated C string, use CStr():
 buf.CStr();  // → "sensor=7, temp=23.50 C"  (null-terminated)
+
+// Need a string_view? Construct one from CStr() + Size():
+std::string_view sv{buf.CStr(), buf.Size()};
+// A convenience View() method is deliberately omitted — a stored
+// string_view would bake in the buffer's size at construction time
+// and silently go stale after the next Format() call, reading into
+// overwritten content.  By requiring explicit construction the API
+// forces you to think about invalidation at each use site.
+//
+// If you hold a string_view, re-obtain it after each mutation:
+buf.Format("new");
+sv = {buf.CStr(), buf.Size()};  // refresh — sv now sees "new"
 
 // Compare against string_view or another buffer:
 buf == "hello";             // operator== with string_view
@@ -78,9 +84,9 @@ buf.Format("value=");
 buf.Append("%d", 42);       // buffer now contains "value=42"
 
 buf.Format("%08x", 0xCAFEU);                 // overwrites the buffer
-buf.View();  // → "0000cafe"
+buf.CStr();  // → "0000cafe"
 
-std::string snapshot{buf.View()};             // copy before overwriting
+std::string snapshot{buf.CStr(), buf.Size()};  // copy before overwriting (no strlen)
 snapshot;    // → "0000cafe"  (still valid, independent of buffer lifetime)
 ```
 

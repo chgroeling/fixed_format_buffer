@@ -44,7 +44,7 @@ TEST(BufferPolicy, NoFloatPolicyInstantiates) {
 TEST(BufferPolicy, AllFeaturesFormatsFloat) {
     FixedFormatBuffer<64, AllFeatures> buf;
     buf.Format("%.2f", 3.14f);
-    EXPECT_EQ(buf.View(), "3.14");
+    EXPECT_STREQ(buf.CStr(), "3.14");
 }
 
 // ---------------------------------------------------------------------------
@@ -54,20 +54,20 @@ TEST(BufferPolicy, AllFeaturesFormatsFloat) {
 TEST(BufferPolicy, NoFloatSkipsFloatOutput) {
     FixedFormatBuffer<64, NoFloat> buf;
     buf.Format("%f", 3.14f);
-    EXPECT_EQ(buf.View(), "");
+    EXPECT_STREQ(buf.CStr(), "");
 }
 
 TEST(BufferPolicy, NoFloatKeepsVaListAligned) {
     // %f is consumed silently; %s after it must still read the right arg.
     FixedFormatBuffer<64, NoFloat> buf;
     buf.Format("%f %s", 1.0f, "ok");
-    EXPECT_EQ(buf.View(), " ok");
+    EXPECT_STREQ(buf.CStr(), " ok");
 }
 
 TEST(BufferPolicy, NoFloatAllowsIntAndString) {
     FixedFormatBuffer<64, NoFloat> buf;
     buf.Format("i=%i s=%s", 7, "hi");
-    EXPECT_EQ(buf.View(), "i=7 s=hi");
+    EXPECT_STREQ(buf.CStr(), "i=7 s=hi");
 }
 
 // ---------------------------------------------------------------------------
@@ -77,25 +77,25 @@ TEST(BufferPolicy, NoFloatAllowsIntAndString) {
 TEST(BufferPolicy, Int64_Max) {
     FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%lli", INT64_MAX);
-    EXPECT_EQ(buf.View(), "9223372036854775807");
+    EXPECT_STREQ(buf.CStr(), "9223372036854775807");
 }
 
 TEST(BufferPolicy, Int64_Min) {
     FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%lli", INT64_MIN);
-    EXPECT_EQ(buf.View(), "-9223372036854775808");
+    EXPECT_STREQ(buf.CStr(), "-9223372036854775808");
 }
 
 TEST(BufferPolicy, Int64_BeyondInt32Max) {
     FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%lli", INT64_C(3000000000));
-    EXPECT_EQ(buf.View(), "3000000000");
+    EXPECT_STREQ(buf.CStr(), "3000000000");
 }
 
 TEST(BufferPolicy, Int64_BeyondInt32Min) {
     FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%lli", INT64_C(-3000000000));
-    EXPECT_EQ(buf.View(), "-3000000000");
+    EXPECT_STREQ(buf.CStr(), "-3000000000");
 }
 
 // ---------------------------------------------------------------------------
@@ -105,13 +105,13 @@ TEST(BufferPolicy, Int64_BeyondInt32Min) {
 TEST(BufferPolicy, Uint64_BeyondUint32Max) {
     FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%llu", UINT64_C(5000000000));
-    EXPECT_EQ(buf.View(), "5000000000");
+    EXPECT_STREQ(buf.CStr(), "5000000000");
 }
 
 TEST(BufferPolicy, Uint64_Max) {
     FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%llu", UINT64_C(18446744073709551615));
-    EXPECT_EQ(buf.View(), "18446744073709551615");
+    EXPECT_STREQ(buf.CStr(), "18446744073709551615");
 }
 
 // ---------------------------------------------------------------------------
@@ -121,19 +121,19 @@ TEST(BufferPolicy, Uint64_Max) {
 TEST(BufferPolicy, Hex64_Large) {
     FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%llx", UINT64_C(0xDEADBEEFCAFEBABE));
-    EXPECT_EQ(buf.View(), "deadbeefcafebabe");
+    EXPECT_STREQ(buf.CStr(), "deadbeefcafebabe");
 }
 
 TEST(BufferPolicy, Hex64_Max) {
     FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%llx", UINT64_C(0xFFFFFFFFFFFFFFFF));
-    EXPECT_EQ(buf.View(), "ffffffffffffffff");
+    EXPECT_STREQ(buf.CStr(), "ffffffffffffffff");
 }
 
 TEST(BufferPolicy, Hex64_ZeroPad) {
     FixedFormatBuffer<64, Int64Policy> buf;
     buf.Format("%016llx", UINT64_C(0xCAFE));
-    EXPECT_EQ(buf.View(), "000000000000cafe");
+    EXPECT_STREQ(buf.CStr(), "000000000000cafe");
 }
 
 // ---------------------------------------------------------------------------
