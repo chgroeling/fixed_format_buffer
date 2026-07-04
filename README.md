@@ -92,6 +92,14 @@ std::string snapshot{buf.CStr(), buf.Size()};  // copy before overwriting (no st
 snapshot;    // → "0000cafe"  (still valid, independent of buffer lifetime)
 ```
 
+The test suite covers every feature, flag, length modifier, and edge case —
+it is the most comprehensive usage reference:
+
+- [`tests/fixed_format_buffer_test.cpp`](tests/fixed_format_buffer_test.cpp) — formatting, flags, width, precision, Write, Append, comparisons
+- [`tests/buffer_policy_test.cpp`](tests/buffer_policy_test.cpp) — custom policies, 64-bit types, float toggle
+- [`tests/buffer_safety_test.cpp`](tests/buffer_safety_test.cpp) — overflow behavior, null-terminator invariants, buffer reuse
+- [`tests/sprintf_comparison_test.cpp`](tests/sprintf_comparison_test.cpp) — output parity with `snprintf`
+
 ## Custom policy types
 
 The default policy uses `int32_t` / `uint32_t`. A pre-built 64-bit policy
