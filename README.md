@@ -24,7 +24,8 @@ that always reflects the current buffer contents.
 - Compile-time argument whitelist — rejects `std::string` and non-trivial types.
   Integer types wider than the policy (e.g. `long long` with a 32-bit policy)
   are rejected at compile time
-- Configurable integer and unsigned types via policy template parameter
+- Float rounding uses banker's rounding (round-half-to-even) — unlike `snprintf`
+  which rounds half-away-from-zero
 - Header-only — single `#include "ffb/fixed_format_buffer.h"`
 - C++17
 
