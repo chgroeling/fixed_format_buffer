@@ -1,10 +1,15 @@
+---
+id: AGENTS
+aliases: []
+tags: []
+---
 # AGENTS.md - fixed_format_buffer
 
 ## Project overview
 
-Allocation-free fixed-capacity formatting buffer for embedded C++. Usable on the stack, as 
-a class member, or statically allocated. Formatted string views are transient and valid only 
-until the buffer is modified, reused, or destroyed.
+Allocation-free fixed-capacity formatting buffer intended for embedded C++,
+also usable in hosted environments. Can live on the stack, as a class member,
+or in static memory.
 
 ## Project structure
 

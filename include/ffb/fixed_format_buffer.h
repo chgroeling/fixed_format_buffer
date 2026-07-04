@@ -101,8 +101,8 @@ struct Int64Policy {
 /// Allocation-free fixed-capacity formatting buffer.
 ///
 /// Usable on the stack, as a class member, or statically allocated.
-/// Formatted string views are transient and valid only until the buffer
-/// is modified, reused, or destroyed.
+/// Use CStr() to obtain a null-terminated const char* that always
+/// reflects the current buffer contents.
 ///
 /// @tparam N      Maximum number of characters (excluding null terminator).
 /// @tparam Policy Feature-flag policy struct.
