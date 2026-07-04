@@ -216,6 +216,80 @@ public:
     /// Return true if the buffer is empty.
     [[nodiscard]] bool Empty() const noexcept { return size_ == 0; }
 
+    /// Return a null-terminated C-string over the current contents.
+    /// Valid only until the buffer is modified or destroyed.
+    [[nodiscard]] const char* CStr() const noexcept { return buffer_.data(); }
+
+    /// Write a raw null-terminated string (no formatting) to the buffer,
+    /// overwriting existing content. Silently truncates at capacity.
+    /// @return Number of characters written (excluding null terminator).
+    std::size_t Write(const char* s) noexcept {
+        const char* p{s};
+        std::size_t len{0U};
+        if (!p) return len;
+        while (*p && len < N) {
+            buffer_[len++] = *p++;
+        }
+        buffer_[len] = '\0';
+        size_ = len;
+        return size_;
+    }
+
+    /// Write a raw string of known length (no formatting) to the buffer,
+    /// overwriting existing content. Silently truncates at capacity.
+    /// @return Number of characters written (excluding null terminator).
+    std::size_t Write(const char* s, std::size_t len) noexcept {
+        std::size_t actual{0U};
+        if (!s || len == 0U) {
+            buffer_[0] = '\0';
+            size_ = 0U;
+            return size_;
+        }
+        while (actual < len && actual < N) {
+            buffer_[actual] = s[actual];
+            ++actual;
+        }
+        buffer_[actual] = '\0';
+        size_ = actual;
+        return size_;
+    }
+
+    /// Type-safe append format. Like Format() but appends to existing
+    /// content instead of overwriting.
+    /// @see Format()
+    template<typename... Args>
+    std::size_t Append(const char* fmt, Args... args) noexcept {
+        static_assert((kIsValidFormatArg<Args> && ...),
+                      "Format argument type not supported. "
+                      "Use integer, floating-point, or const char* types.");
+        return AppendVa(fmt, args...);
+    }
+
+    friend bool operator==(const FixedFormatBuffer& a,
+                           const FixedFormatBuffer& b) noexcept {
+        return a.View() == b.View();
+    }
+    friend bool operator!=(const FixedFormatBuffer& a,
+                           const FixedFormatBuffer& b) noexcept {
+        return !(a == b);
+    }
+    friend bool operator==(const FixedFormatBuffer& buf,
+                           std::string_view sv) noexcept {
+        return buf.View() == sv;
+    }
+    friend bool operator==(std::string_view sv,
+                           const FixedFormatBuffer& buf) noexcept {
+        return sv == buf.View();
+    }
+    friend bool operator!=(const FixedFormatBuffer& buf,
+                           std::string_view sv) noexcept {
+        return buf.View() != sv;
+    }
+    friend bool operator!=(std::string_view sv,
+                           const FixedFormatBuffer& buf) noexcept {
+        return sv != buf.View();
+    }
+
 private:
     // -------------------------------------------------------------------------
     // Compile-time argument type whitelist
@@ -265,7 +339,16 @@ private:
     std::size_t FormatVa(const char* fmt, ...) noexcept {
         va_list args;
         va_start(args, fmt);
-        size_ = DoFormat(fmt, args);
+        size_ = DoFormat(fmt, args, 0U);
+        va_end(args);
+        return size_;
+    }
+
+    /// C-variadic bridge — called by the type-safe template Append().
+    std::size_t AppendVa(const char* fmt, ...) noexcept {
+        va_list args;
+        va_start(args, fmt);
+        size_ = DoFormat(fmt, args, size_);
         va_end(args);
         return size_;
     }
@@ -556,8 +639,8 @@ private:
     // Core format loop
     // -------------------------------------------------------------------------
 
-    std::size_t DoFormat(const char* fmt, va_list& args) noexcept {
-        Gadget g{buffer_.data(), 0U, N};
+    std::size_t DoFormat(const char* fmt, va_list& args, std::size_t start_pos = 0U) noexcept {
+        Gadget g{buffer_.data(), start_pos, N};
 
         while (*fmt) {
             if (*fmt != '%') { g.Put(*fmt++); continue; }

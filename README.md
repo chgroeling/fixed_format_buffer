@@ -24,8 +24,9 @@ cache-friendly and deterministic.
 ### Why no output?
 
 This is a pure formatting buffer, not an I/O layer. `View()` returns a
-null-terminated `string_view` — route it to UART, SPI, BLE, flash, or
-any other channel without a dependency on a specific HAL.
+`string_view`, `CStr()` returns a null-terminated `const char*` — route it
+to UART, SPI, BLE, flash, or any other channel without a dependency on a
+specific HAL.
 
 ### Movable
 
@@ -38,6 +39,10 @@ The move constructor clears the source buffer to empty, preventing dangling
 - Flags: `-` (left-justify), `+` (show sign), ` ` (space), `0` (zero-pad), `#` (alternate form)
 - Width and precision (including `*` from argument list)
 - Length modifiers: `hh` `h` `l` `ll` `j` `z` `t` `L`
+- `Append()` — format and append without overwriting existing content
+- `Write()` — copy raw strings into the buffer without format parsing
+- `CStr()` — null-terminated `const char*` accessor
+- `operator==` / `operator!=` — compare against another buffer or `string_view`
 - Compile-time type checking — rejects `std::string`, types wider than the
   policy (e.g. `double` with a `FloatType=float` policy, `long long` with a
   32-bit policy), and other incompatible arguments
@@ -57,15 +62,26 @@ buf.View();  // → "sensor=7, temp=23.50 C"
 
 // View() returns a string_view into the buffer. It is invalidated
 // by the next Format() call, Clear(), or when the buffer goes out of scope.
-// For a null-terminated C string, use data() on the string_view:
+// For a null-terminated C string, use CStr():
+buf.CStr();  // → "sensor=7, temp=23.50 C"  (null-terminated)
 
-puts(buf.View().data());                      // null-terminated, no copy
+// Compare against string_view or another buffer:
+buf == "hello";             // operator== with string_view
+buf == otherBuf;            // operator== with another FixedFormatBuffer
 
-std::string snapshot{buf.View()};             // copy before overwriting
+// Write raw strings without format parsing:
+buf.Write("hello");         // overwrites with "hello"
+buf.Write("world", 3U);     // overwrites with "wor"
+
+// Append formatted content instead of overwriting:
+buf.Format("value=");
+buf.Append("%d", 42);       // buffer now contains "value=42"
 
 buf.Format("%08x", 0xCAFEU);                 // overwrites the buffer
 buf.View();  // → "0000cafe"
-snapshot;    // → "sensor=7, temp=23.50 C"  (still valid)
+
+std::string snapshot{buf.View()};             // copy before overwriting
+snapshot;    // → "0000cafe"  (still valid, independent of buffer lifetime)
 ```
 
 ## Custom policy types

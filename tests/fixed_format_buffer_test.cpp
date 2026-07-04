@@ -936,3 +936,287 @@ TEST(FixedFormatBuffer, FormatUnsigned_LeftJustifyOverridesZeroPad) {
     buf.Format("%-08u", 42U);
     EXPECT_EQ(buf.View(), "42      ");
 }
+
+// ---------------------------------------------------------------------------
+// CStr
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, CStr_ReturnsNullTerminatedString) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "hello");
+    const char* s{buf.CStr()};
+    EXPECT_STREQ(s, "hello");
+}
+
+TEST(FixedFormatBuffer, CStr_EmptyBuffer) {
+    FixedFormatBuffer<64> buf;
+    const char* s{buf.CStr()};
+    EXPECT_STREQ(s, "");
+}
+
+TEST(FixedFormatBuffer, CStr_AfterClear) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "data");
+    buf.Clear();
+    const char* s{buf.CStr()};
+    EXPECT_STREQ(s, "");
+}
+
+// ---------------------------------------------------------------------------
+// Write (const char*)
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, Write_CString_Basic) {
+    FixedFormatBuffer<64> buf;
+    buf.Write("hello");
+    EXPECT_EQ(buf.View(), "hello");
+    EXPECT_EQ(buf.Size(), 5u);
+}
+
+TEST(FixedFormatBuffer, Write_CString_Empty) {
+    FixedFormatBuffer<64> buf;
+    buf.Write("");
+    EXPECT_EQ(buf.View(), "");
+    EXPECT_EQ(buf.Size(), 0u);
+}
+
+TEST(FixedFormatBuffer, Write_CString_Nullptr) {
+    FixedFormatBuffer<64> buf;
+    buf.Write(static_cast<const char*>(nullptr));
+    EXPECT_EQ(buf.View(), "");
+    EXPECT_EQ(buf.Size(), 0u);
+}
+
+TEST(FixedFormatBuffer, Write_CString_OverwritesExisting) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "first");
+    buf.Write("second");
+    EXPECT_EQ(buf.View(), "second");
+}
+
+TEST(FixedFormatBuffer, Write_CString_TruncatesAtCapacity) {
+    FixedFormatBuffer<4> buf;
+    buf.Write("abcdefg");
+    EXPECT_EQ(buf.View(), "abcd");
+    EXPECT_EQ(buf.Size(), 4u);
+}
+
+TEST(FixedFormatBuffer, Write_CString_ReturnsWrittenCount) {
+    FixedFormatBuffer<64> buf;
+    EXPECT_EQ(buf.Write("abc"), 3u);
+}
+
+TEST(FixedFormatBuffer, Write_CString_ExactCapacity) {
+    FixedFormatBuffer<5> buf;
+    buf.Write("hello");
+    EXPECT_EQ(buf.View(), "hello");
+    EXPECT_EQ(buf.Size(), 5u);
+}
+
+// ---------------------------------------------------------------------------
+// Write (const char*, size_t)
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, Write_Len_Basic) {
+    FixedFormatBuffer<64> buf;
+    buf.Write("abcdef", 3U);
+    EXPECT_EQ(buf.View(), "abc");
+    EXPECT_EQ(buf.Size(), 3u);
+}
+
+TEST(FixedFormatBuffer, Write_Len_Zero) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "original");
+    buf.Write("abc", 0U);
+    EXPECT_EQ(buf.View(), "");
+    EXPECT_EQ(buf.Size(), 0u);
+}
+
+TEST(FixedFormatBuffer, Write_Len_Nullptr) {
+    FixedFormatBuffer<64> buf;
+    buf.Write(static_cast<const char*>(nullptr), 3U);
+    EXPECT_EQ(buf.View(), "");
+    EXPECT_EQ(buf.Size(), 0u);
+}
+
+TEST(FixedFormatBuffer, Write_Len_OverwritesExisting) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "first");
+    buf.Write("second", 6U);
+    EXPECT_EQ(buf.View(), "second");
+}
+
+TEST(FixedFormatBuffer, Write_Len_TruncatesAtCapacity) {
+    FixedFormatBuffer<4> buf;
+    buf.Write("abcdefg", 7U);
+    EXPECT_EQ(buf.View(), "abcd");
+    EXPECT_EQ(buf.Size(), 4u);
+}
+
+TEST(FixedFormatBuffer, Write_Len_ReturnsWrittenCount) {
+    FixedFormatBuffer<64> buf;
+    EXPECT_EQ(buf.Write("abc", 3U), 3u);
+}
+
+TEST(FixedFormatBuffer, Write_Len_LongerThanInput) {
+    FixedFormatBuffer<64> buf;
+    const char src[]{"hi_____"};
+    buf.Write(src, 5U);
+    EXPECT_EQ(buf.View(), "hi___");
+    EXPECT_EQ(buf.Size(), 5u);
+}
+
+// ---------------------------------------------------------------------------
+// Append
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, Append_String) {
+    FixedFormatBuffer<64> buf;
+    buf.Append("%s", "hello");
+    buf.Append("%s", " world");
+    EXPECT_EQ(buf.View(), "hello world");
+}
+
+TEST(FixedFormatBuffer, Append_Int) {
+    FixedFormatBuffer<64> buf;
+    buf.Append("%d", 10);
+    buf.Append("%d", 20);
+    EXPECT_EQ(buf.View(), "1020");
+}
+
+TEST(FixedFormatBuffer, Append_MixedArgs) {
+    FixedFormatBuffer<64> buf;
+    buf.Append("x=%d", 1);
+    buf.Append(", y=%d", 2);
+    EXPECT_EQ(buf.View(), "x=1, y=2");
+}
+
+TEST(FixedFormatBuffer, Append_ToEmptyBuffer) {
+    FixedFormatBuffer<64> buf;
+    buf.Append("%s", "first");
+    EXPECT_EQ(buf.View(), "first");
+}
+
+TEST(FixedFormatBuffer, Append_TruncatesAtCapacity) {
+    FixedFormatBuffer<8> buf;
+    buf.Append("%s", "hello");
+    buf.Append("%s", ", world!");
+    EXPECT_EQ(buf.View(), "hello, w");
+    EXPECT_EQ(buf.Size(), 8u);
+}
+
+TEST(FixedFormatBuffer, Append_ReturnsSize) {
+    FixedFormatBuffer<64> buf;
+    buf.Append("%s", "abc");
+    EXPECT_EQ(buf.Append("%s", "de"), 5u);
+}
+
+TEST(FixedFormatBuffer, Append_PreservesAfterOverflow) {
+    FixedFormatBuffer<10> buf;
+    buf.Append("%s", "hello");
+    buf.Append("%s", " world! extra");  // truncated
+    EXPECT_EQ(buf.View(), "hello worl");
+    EXPECT_EQ(buf.Size(), 10u);
+}
+
+TEST(FixedFormatBuffer, Append_WithLiteralPercent) {
+    FixedFormatBuffer<64> buf;
+    buf.Append("%d%%", 50);
+    EXPECT_EQ(buf.View(), "50%");
+}
+
+TEST(FixedFormatBuffer, Append_AfterFormat) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "base");
+    buf.Append("+%d", 1);
+    EXPECT_EQ(buf.View(), "base+1");
+}
+
+TEST(FixedFormatBuffer, Append_Int_Negative) {
+    FixedFormatBuffer<64> buf;
+    buf.Append("%d", -5);
+    buf.Append("%d", -10);
+    EXPECT_EQ(buf.View(), "-5-10");
+}
+
+TEST(FixedFormatBuffer, Append_Float) {
+    FixedFormatBuffer<64> buf;
+    buf.Append("%.1f", 1.1f);
+    buf.Append("%.1f", 2.2f);
+    EXPECT_EQ(buf.View(), "1.12.2");
+}
+
+TEST(FixedFormatBuffer, Append_MultipleAppends) {
+    FixedFormatBuffer<128> buf;
+    buf.Append("%s", "The ");
+    buf.Append("%s", "quick ");
+    buf.Append("%s", "brown ");
+    buf.Append("%s", "fox");
+    EXPECT_EQ(buf.View(), "The quick brown fox");
+}
+
+// ---------------------------------------------------------------------------
+// operator== / operator!=
+// ---------------------------------------------------------------------------
+
+TEST(FixedFormatBuffer, OperatorEquals_BufferVsBuffer_Same) {
+    FixedFormatBuffer<64> a;
+    FixedFormatBuffer<64> b;
+    a.Format("%s", "hello");
+    b.Format("%s", "hello");
+    EXPECT_TRUE(a == b);
+    EXPECT_FALSE(a != b);
+}
+
+TEST(FixedFormatBuffer, OperatorEquals_BufferVsBuffer_Different) {
+    FixedFormatBuffer<64> a;
+    FixedFormatBuffer<64> b;
+    a.Format("%s", "hello");
+    b.Format("%s", "world");
+    EXPECT_FALSE(a == b);
+    EXPECT_TRUE(a != b);
+}
+
+TEST(FixedFormatBuffer, OperatorEquals_BufferVsBuffer_Empty) {
+    FixedFormatBuffer<64> a;
+    FixedFormatBuffer<64> b;
+    EXPECT_TRUE(a == b);
+    EXPECT_FALSE(a != b);
+}
+
+TEST(FixedFormatBuffer, OperatorEquals_BufferVsStringView_Same) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "hello");
+    EXPECT_TRUE(buf == std::string_view{"hello"});
+    EXPECT_FALSE(buf != std::string_view{"hello"});
+}
+
+TEST(FixedFormatBuffer, OperatorEquals_BufferVsStringView_Different) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "hello");
+    EXPECT_FALSE(buf == std::string_view{"world"});
+    EXPECT_TRUE(buf != std::string_view{"world"});
+}
+
+TEST(FixedFormatBuffer, OperatorEquals_StringViewVsBuffer_Same) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "hello");
+    EXPECT_TRUE(std::string_view{"hello"} == buf);
+    EXPECT_FALSE(std::string_view{"hello"} != buf);
+}
+
+TEST(FixedFormatBuffer, OperatorEquals_StringViewVsBuffer_Different) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%s", "hello");
+    EXPECT_FALSE(std::string_view{"world"} == buf);
+    EXPECT_TRUE(std::string_view{"world"} != buf);
+}
+
+TEST(FixedFormatBuffer, OperatorEquals_DifferentPositions) {
+    FixedFormatBuffer<64> a;
+    FixedFormatBuffer<64> b;
+    a.Append("%s", "ab");
+    a.Append("%s", "cd");
+    b.Format("%s", "abcd");
+    EXPECT_TRUE(a == b);
+}
