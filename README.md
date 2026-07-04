@@ -1,17 +1,19 @@
 # fixed_format_buffer
 
 Allocation-free fixed-capacity formatting buffer for embedded C++.
-
 No heap, no exceptions, no recursion — suitable for bare-metal and RTOS
 environments where `malloc` is unavailable or forbidden. The buffer lives
 on the stack, as a class member, or in static memory.
+
+The formatting engine is a complete from-scratch reimplementation: zero
+external dependencies, no libc `printf`-family calls.
 
 For formatted output use `CStr()`, which returns a null-terminated `const char*`
 that always reflects the current buffer contents.
 
 ## Features
 
-- Subset of `printf`-style formatting: `%c` `%s` `%d` `%i` `%u` `%x` `%X` `%f`
+- Subset of `snprintf`-style formatting: `%c` `%s` `%d` `%i` `%u` `%x` `%X` `%f`
 - Flags: `-` (left-justify), `+` (show sign), ` ` (space), `0` (zero-pad), `#` (alternate form)
 - Width and precision (including `*` from argument list)
 - Length modifiers: `hh` `h` `l` `ll` `j` `z` `t` `L`
