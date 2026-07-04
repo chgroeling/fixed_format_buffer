@@ -41,3 +41,4 @@ class FixedFormatBufferConan(ConanFile):
         self.cpp_info.bindirs = []
         self.cpp_info.libdirs = []
         self.cpp_info.includedirs = ["include"]
+        self.cpp_info.set_property("cmake_target_name", "fixed_format_buffer::fixed_format_buffer")
