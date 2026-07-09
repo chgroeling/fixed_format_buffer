@@ -17,8 +17,8 @@
 /// @{
 #define FFB_VERSION_MAJOR 0
 #define FFB_VERSION_MINOR 3
-#define FFB_VERSION_PATCH 0
-#define FFB_VERSION_STRING "0.3.0"
+#define FFB_VERSION_PATCH 1
+#define FFB_VERSION_STRING "0.3.1"
 /// @}
 
 namespace ffb {
