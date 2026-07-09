@@ -58,11 +58,11 @@ inline constexpr std::string_view kVersion{FFB_VERSION_STRING};
 /// @par Extending the policy
 /// Derive or define a new struct overriding only what you need:
 /// @code
-///   struct Int64Policy {
+///   struct Int64DoublePolicy {
 ///       static constexpr bool kSupportFloatingPointDecimals = true;
-///       using IntType   = long long;          // accept 64-bit integers via
-///       %i/%d using UIntType  = unsigned long long; // accept 64-bit unsigned
-///       via %x/%u using FloatType = float;
+///       using IntType   = long long;          // accept 64-bit integers via %i/%d
+///       using UIntType  = unsigned long long; // accept 64-bit unsigned via %x/%u
+///       using FloatType = double;             // double-precision float type
 ///   };
 /// @endcode
 struct AllFeatures {
@@ -96,12 +96,12 @@ struct AllFeatures {
     using FloatType = float;
 };
 
-/// Policy with 64-bit integer support.
+/// Policy with 64-bit integer support and double-precision floating-point.
 ///
 /// Use when formatting @c long, @c long long, @c size_t, @c ptrdiff_t,
-/// @c intmax_t, or @c uintmax_t arguments.  Inherits the float defaults
-/// from AllFeatures (FloatType = float, default precision = 6).
-struct Int64Policy {
+/// @c intmax_t, or @c uintmax_t arguments, or when @c double precision
+/// is needed for @c %f formatting.
+struct Int64DoublePolicy {
     /// @copydoc AllFeatures::kSupportFloatingPointDecimals
     static constexpr bool kSupportFloatingPointDecimals = true;
 
@@ -118,7 +118,7 @@ struct Int64Policy {
     using UIntType = uint64_t;
 
     /// Internal floating-point type for @c %f.
-    using FloatType = float;
+    using FloatType = double;
 };
 
 /// Allocation-free fixed-capacity formatting buffer.
@@ -676,7 +676,7 @@ private:
                 // policy's IntType is narrower than int (e.g. 16-bit int
                 // targets with IntType = int32_t).
                 //
-                // When IntType is wider than int (e.g. Int64Policy) the
+                // When IntType is wider than int (e.g. Int64DoublePolicy) the
                 // caller must supply a length modifier (%ld, %lld, …);
                 // otherwise the value is truncated to int-width.
                 return static_cast<IntType>(va_arg(args, int));

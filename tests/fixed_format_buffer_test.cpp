@@ -5,7 +5,7 @@
 #include <gtest/gtest.h>
 
 using ffb::FixedFormatBuffer;
-using ffb::Int64Policy;
+using ffb::Int64DoublePolicy;
 
 struct LongDoublePolicy {
     static constexpr bool kSupportFloatingPointDecimals = true;
@@ -330,13 +330,13 @@ TEST(FixedFormatBuffer, LengthMod_hhd_Char) {
 }
 
 TEST(FixedFormatBuffer, LengthMod_ld_Long) {
-    FixedFormatBuffer<64, Int64Policy> buf;
+    FixedFormatBuffer<64, Int64DoublePolicy> buf;
     buf.Format("%ld", 42L);
     EXPECT_STREQ(buf.CStr(), "42");
 }
 
 TEST(FixedFormatBuffer, LengthMod_lld) {
-    FixedFormatBuffer<64, Int64Policy> buf;
+    FixedFormatBuffer<64, Int64DoublePolicy> buf;
     buf.Format("%lld", 42LL);
     EXPECT_STREQ(buf.CStr(), "42");
 }
@@ -348,49 +348,49 @@ TEST(FixedFormatBuffer, LengthMod_hu) {
 }
 
 TEST(FixedFormatBuffer, LengthMod_lu) {
-    FixedFormatBuffer<64, Int64Policy> buf;
+    FixedFormatBuffer<64, Int64DoublePolicy> buf;
     buf.Format("%lu", 42UL);
     EXPECT_STREQ(buf.CStr(), "42");
 }
 
 TEST(FixedFormatBuffer, LengthMod_llu) {
-    FixedFormatBuffer<64, Int64Policy> buf;
+    FixedFormatBuffer<64, Int64DoublePolicy> buf;
     buf.Format("%llu", 42ULL);
     EXPECT_STREQ(buf.CStr(), "42");
 }
 
 TEST(FixedFormatBuffer, LengthMod_lx) {
-    FixedFormatBuffer<64, Int64Policy> buf;
+    FixedFormatBuffer<64, Int64DoublePolicy> buf;
     buf.Format("%lx", 0x2AUL);
     EXPECT_STREQ(buf.CStr(), "2a");
 }
 
 TEST(FixedFormatBuffer, LengthMod_llX) {
-    FixedFormatBuffer<64, Int64Policy> buf;
+    FixedFormatBuffer<64, Int64DoublePolicy> buf;
     buf.Format("%llX", 0xFFULL);
     EXPECT_STREQ(buf.CStr(), "FF");
 }
 
 TEST(FixedFormatBuffer, LengthMod_jd) {
-    FixedFormatBuffer<64, Int64Policy> buf;
+    FixedFormatBuffer<64, Int64DoublePolicy> buf;
     buf.Format("%jd", static_cast<intmax_t>(-1));
     EXPECT_STREQ(buf.CStr(), "-1");
 }
 
 TEST(FixedFormatBuffer, LengthMod_ju) {
-    FixedFormatBuffer<64, Int64Policy> buf;
+    FixedFormatBuffer<64, Int64DoublePolicy> buf;
     buf.Format("%ju", static_cast<uintmax_t>(42));
     EXPECT_STREQ(buf.CStr(), "42");
 }
 
 TEST(FixedFormatBuffer, LengthMod_zu) {
-    FixedFormatBuffer<64, Int64Policy> buf;
+    FixedFormatBuffer<64, Int64DoublePolicy> buf;
     buf.Format("%zu", static_cast<size_t>(100));
     EXPECT_STREQ(buf.CStr(), "100");
 }
 
 TEST(FixedFormatBuffer, LengthMod_td) {
-    FixedFormatBuffer<64, Int64Policy> buf;
+    FixedFormatBuffer<64, Int64DoublePolicy> buf;
     buf.Format("%td", static_cast<ptrdiff_t>(-7));
     EXPECT_STREQ(buf.CStr(), "-7");
 }
@@ -402,7 +402,7 @@ TEST(FixedFormatBuffer, LengthMod_Lf) {
 }
 
 TEST(FixedFormatBuffer, LengthMod_Combined_FlagsAndLength) {
-    FixedFormatBuffer<64, Int64Policy> buf;
+    FixedFormatBuffer<64, Int64DoublePolicy> buf;
     buf.Format("%+#08llx", 0x2AULL);
     EXPECT_STREQ(buf.CStr(), "0x00002a");
 }
