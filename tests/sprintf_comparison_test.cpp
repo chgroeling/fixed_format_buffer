@@ -8,7 +8,7 @@
 #include <gtest/gtest.h>
 
 using ffb::FixedFormatBuffer;
-using ffb::Int64DoublePolicy;
+using ffb::HighPrecisionPolicy;
 
 struct LongDoublePolicy {
     static constexpr bool kSupportFloatingPointDecimals = true;
@@ -300,13 +300,13 @@ TEST(SprintfComparison, LengthMod_hhd) {
 }
 
 TEST(SprintfComparison, LengthMod_ld) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%ld", 123456L);
     EXPECT_EQ(buf.CStr(), Ref("%ld", 123456L));
 }
 
 TEST(SprintfComparison, LengthMod_lld) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%lld", 42LL);
     EXPECT_EQ(buf.CStr(), Ref("%lld", 42LL));
 }
@@ -318,43 +318,43 @@ TEST(SprintfComparison, LengthMod_hu) {
 }
 
 TEST(SprintfComparison, LengthMod_lu) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%lu", 42UL);
     EXPECT_EQ(buf.CStr(), Ref("%lu", 42UL));
 }
 
 TEST(SprintfComparison, LengthMod_llu) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%llu", 12345ULL);
     EXPECT_EQ(buf.CStr(), Ref("%llu", 12345ULL));
 }
 
 TEST(SprintfComparison, LengthMod_lx) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%lx", 0xABCDUL);
     EXPECT_EQ(buf.CStr(), Ref("%lx", 0xABCDUL));
 }
 
 TEST(SprintfComparison, LengthMod_llX) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%#llX", 0xFFULL);
     EXPECT_EQ(buf.CStr(), Ref("%#llX", 0xFFULL));
 }
 
 TEST(SprintfComparison, LengthMod_zu) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%zu", static_cast<size_t>(100));
     EXPECT_EQ(buf.CStr(), Ref("%zu", static_cast<size_t>(100)));
 }
 
 TEST(SprintfComparison, LengthMod_td) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%td", static_cast<ptrdiff_t>(-7));
     EXPECT_EQ(buf.CStr(), Ref("%td", static_cast<ptrdiff_t>(-7)));
 }
 
 TEST(SprintfComparison, LengthMod_jd) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%jd", static_cast<intmax_t>(-42));
     EXPECT_EQ(buf.CStr(), Ref("%jd", static_cast<intmax_t>(-42)));
 }
@@ -472,35 +472,35 @@ TEST(SprintfComparison, Float_NegativeInf) {
 }
 
 // ---------------------------------------------------------------------------
-// Int64DoublePolicy double-precision float formatting
+// HighPrecisionPolicy double-precision float formatting
 // ---------------------------------------------------------------------------
 
 TEST(SprintfComparison, DoubleFloat_Basic) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%.2f", 3.14);  // double literal
     EXPECT_EQ(buf.CStr(), Ref("%.2f", 3.14));
 }
 
 TEST(SprintfComparison, DoubleFloat_Negative) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%.3f", -2.718);  // double literal
     EXPECT_EQ(buf.CStr(), Ref("%.3f", -2.718));
 }
 
 TEST(SprintfComparison, DoubleFloat_DefaultPrecision) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%f", 1.0);  // double literal
     EXPECT_EQ(buf.CStr(), Ref("%f", 1.0));
 }
 
 TEST(SprintfComparison, DoubleFloat_AlternateForm) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%#.0f", 42.0);  // double literal
     EXPECT_EQ(buf.CStr(), Ref("%#.0f", 42.0));
 }
 
 TEST(SprintfComparison, DoubleFloat_WidthAndSign) {
-    FixedFormatBuffer<64, Int64DoublePolicy> buf;
+    FixedFormatBuffer<64, HighPrecisionPolicy> buf;
     buf.Format("%+10.2f", 1.5);  // double literal
     EXPECT_EQ(buf.CStr(), Ref("%+10.2f", 1.5));
 }

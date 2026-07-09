@@ -47,8 +47,8 @@ int main() {
     check(small.Size() == 4U, "truncation size");
     check(std::string{small.CStr()} == "hell", "truncation content");
 
-    // --- Int64DoublePolicy ---
-    ffb::FixedFormatBuffer<64, ffb::Int64DoublePolicy> big;
+    // --- HighPrecisionPolicy ---
+    ffb::FixedFormatBuffer<64, ffb::HighPrecisionPolicy> big;
     big.Format("%llu", UINT64_C(18446744073709551615));
     check(std::string{big.CStr()} == "18446744073709551615", "uint64 max");
 

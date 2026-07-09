@@ -58,14 +58,14 @@ inline constexpr std::string_view kVersion{FFB_VERSION_STRING};
 /// @par Extending the policy
 /// Derive or define a new struct overriding only what you need:
 /// @code
-///   struct Int64DoublePolicy {
+///   struct HighPrecisionPolicy {
 ///       static constexpr bool kSupportFloatingPointDecimals = true;
 ///       using IntType   = long long;          // accept 64-bit integers via %i/%d
 ///       using UIntType  = unsigned long long; // accept 64-bit unsigned via %x/%u
 ///       using FloatType = double;             // double-precision float type
 ///   };
 /// @endcode
-struct AllFeatures {
+struct StandardPolicy {
     /// When @c true, the @c %f specifier formats floating-point decimals.
     /// When @c false, @c %f is silently consumed from the argument list
     /// but produces no output, and all float formatting code is compiled away.
@@ -101,14 +101,14 @@ struct AllFeatures {
 /// Use when formatting @c long, @c long long, @c size_t, @c ptrdiff_t,
 /// @c intmax_t, or @c uintmax_t arguments, or when @c double precision
 /// is needed for @c %f formatting.
-struct Int64DoublePolicy {
-    /// @copydoc AllFeatures::kSupportFloatingPointDecimals
+struct HighPrecisionPolicy {
+    /// @copydoc StandardPolicy::kSupportFloatingPointDecimals
     static constexpr bool kSupportFloatingPointDecimals = true;
 
-    /// @copydoc AllFeatures::kDefaultFloatPrecision
+    /// @copydoc StandardPolicy::kDefaultFloatPrecision
     static constexpr std::size_t kDefaultFloatPrecision = 6U;
 
-    /// @copydoc AllFeatures::kMaxFloatPrecision
+    /// @copydoc StandardPolicy::kMaxFloatPrecision
     static constexpr std::size_t kMaxFloatPrecision = 6U;
 
     /// 64-bit signed integer type for @c %i / @c %d.
@@ -129,14 +129,14 @@ struct Int64DoublePolicy {
 ///
 /// @tparam N      Maximum number of characters (excluding null terminator).
 /// @tparam Policy Feature-flag policy struct.
-///                Defaults to AllFeatures (all features enabled).
+///                Defaults to StandardPolicy (all features enabled).
 ///
 /// @warning Passing an integer type wider than the policy's IntType or
 ///          UIntType (e.g. a 64-bit integer to a 32-bit policy) is rejected
 ///          at compile time — such a mismatch would cause undefined behaviour
 ///          in the variadic argument list.  Use a custom policy with matching
 ///          type aliases (e.g. IntType = int64_t) to handle wider values.
-template <std::size_t N, typename Policy = AllFeatures>
+template <std::size_t N, typename Policy = StandardPolicy>
 class FixedFormatBuffer {
 public:
     /// Maximum number of characters the buffer can hold (excluding null
@@ -676,7 +676,7 @@ private:
                 // policy's IntType is narrower than int (e.g. 16-bit int
                 // targets with IntType = int32_t).
                 //
-                // When IntType is wider than int (e.g. Int64DoublePolicy) the
+                // When IntType is wider than int (e.g. HighPrecisionPolicy) the
                 // caller must supply a length modifier (%ld, %lld, …);
                 // otherwise the value is truncated to int-width.
                 return static_cast<IntType>(va_arg(args, int));

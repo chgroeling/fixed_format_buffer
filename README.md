@@ -104,13 +104,13 @@ it is the most comprehensive usage reference:
 ## Custom policy types
 
 The default policy uses `int32_t` / `uint32_t`. A pre-built 64-bit policy
-(`ffb::Int64DoublePolicy`) is available.  You can also define your own policy
+(`ffb::HighPrecisionPolicy`) is available.  You can also define your own policy
 to control the integer width, floating-point type, or to disable float
 support entirely (`kSupportFloatingPointDecimals = false`).
 
 ```cpp
 // Built-in 64-bit + double-precision policy:
-ffb::FixedFormatBuffer<32, ffb::Int64DoublePolicy> buf;
+ffb::FixedFormatBuffer<32, ffb::HighPrecisionPolicy> buf;
 buf.Format("%u", UINT64_C(18446744073709551615));
 // → "18446744073709551615"
 
@@ -130,7 +130,7 @@ buf2.Format("%.9f", 3.141592653589793);  // NOTE: precision capped at 6
 > **Note:** Passing types wider than the policy (e.g. `double` to a
 > `FloatType=float` policy, or `long long` to the default 32-bit policy)
 > is a compile-time error, not silent truncation. Use a matching policy
-> (like `ffb::Int64DoublePolicy` or a policy with `FloatType = double`) to accept
+> (like `ffb::HighPrecisionPolicy` or a policy with `FloatType = double`) to accept
 > wider arguments.
 
 ## Building
