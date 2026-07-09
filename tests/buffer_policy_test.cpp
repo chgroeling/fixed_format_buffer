@@ -4,18 +4,18 @@
 #include <cstdint>
 #include <gtest/gtest.h>
 
-using ffb::StandardPolicy;
 using ffb::FixedFormatBuffer;
 using ffb::HighPrecisionPolicy;
 using ffb::NoFloatPolicy;
+using ffb::StandardPolicy;
 
 // Local policy for tests — float disabled.
 struct NoFloat {
-    static constexpr bool        kSupportFloatingPointDecimals = false;
-    static constexpr std::size_t kDefaultFloatPrecision        = 6U;
-    static constexpr std::size_t kMaxFloatPrecision            = 6U;
-    using IntType   = int32_t;
-    using UIntType  = uint32_t;
+    static constexpr bool kSupportFloatingPointDecimals = false;
+    static constexpr std::size_t kDefaultFloatPrecision = 6U;
+    static constexpr std::size_t kMaxFloatPrecision = 6U;
+    using IntType = int32_t;
+    using UIntType = uint32_t;
     using FloatType = float;
 };
 
@@ -226,26 +226,26 @@ TEST(BufferPolicy, DoubleFloat_WidthAndSign) {
 // ---------------------------------------------------------------------------
 
 struct HighPrecisionDoublePolicy {
-    static constexpr bool        kSupportFloatingPointDecimals = true;
-    static constexpr std::size_t kDefaultFloatPrecision        = 9U;
-    static constexpr std::size_t kMaxFloatPrecision            = 9U;
-    using IntType   = int32_t;
-    using UIntType  = uint32_t;
+    static constexpr bool kSupportFloatingPointDecimals = true;
+    static constexpr std::size_t kDefaultFloatPrecision = 9U;
+    static constexpr std::size_t kMaxFloatPrecision = 9U;
+    using IntType = int32_t;
+    using UIntType = uint32_t;
     using FloatType = double;
 };
 
 struct HighPrecisionFloatPolicy {
-    static constexpr bool        kSupportFloatingPointDecimals = true;
-    static constexpr std::size_t kDefaultFloatPrecision        = 9U;
-    static constexpr std::size_t kMaxFloatPrecision            = 9U;
-    using IntType   = int32_t;
-    using UIntType  = uint32_t;
+    static constexpr bool kSupportFloatingPointDecimals = true;
+    static constexpr std::size_t kDefaultFloatPrecision = 9U;
+    static constexpr std::size_t kMaxFloatPrecision = 9U;
+    using IntType = int32_t;
+    using UIntType = uint32_t;
     using FloatType = float;
 };
 
 TEST(BufferPolicy, DoublePrecision_ProducesDifferentOutputThanFloat) {
     FixedFormatBuffer<64, HighPrecisionDoublePolicy> buf_double;
-    FixedFormatBuffer<64, HighPrecisionFloatPolicy>  buf_float;
+    FixedFormatBuffer<64, HighPrecisionFloatPolicy> buf_float;
 
     const double pi{3.14159265358979323846};
 
