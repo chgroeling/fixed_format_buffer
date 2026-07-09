@@ -27,7 +27,7 @@ that always reflects the current buffer contents.
 - Float rounding uses banker's rounding (round-half-to-even) — unlike `snprintf`
   which rounds half-away-from-zero
 - Header-only — single `#include "ffb/fixed_format_buffer.h"`
-- C++14
+- C++14 — compatible with safety-certified compilers (e.g. MISRA, ISO 26262 toolchains)
 
 ## Motivation
 
