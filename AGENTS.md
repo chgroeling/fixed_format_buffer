@@ -30,7 +30,7 @@ Usage: `#include "ffb/fixed_format_buffer.h"` and `ffb::FixedFormatBuffer<N>`.
 
 ## Key Technologies
 
-- **C++17** - primary implementation language
+- **C++14** - primary implementation language
 - **CMake** - build system
 - **Conan 2** - package manager
 - **GoogleTest** - test framework

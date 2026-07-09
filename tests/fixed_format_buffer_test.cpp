@@ -1314,29 +1314,29 @@ TEST(FixedFormatBuffer, OperatorEquals_BufferVsBuffer_Empty) {
 TEST(FixedFormatBuffer, OperatorEquals_BufferVsStringView_Same) {
     FixedFormatBuffer<64> buf;
     buf.Format("%s", "hello");
-    EXPECT_TRUE(buf == std::string_view{"hello"});
-    EXPECT_FALSE(buf != std::string_view{"hello"});
+    EXPECT_TRUE(buf == "hello");
+    EXPECT_FALSE(buf != "hello");
 }
 
 TEST(FixedFormatBuffer, OperatorEquals_BufferVsStringView_Different) {
     FixedFormatBuffer<64> buf;
     buf.Format("%s", "hello");
-    EXPECT_FALSE(buf == std::string_view{"world"});
-    EXPECT_TRUE(buf != std::string_view{"world"});
+    EXPECT_FALSE(buf == "world");
+    EXPECT_TRUE(buf != "world");
 }
 
 TEST(FixedFormatBuffer, OperatorEquals_StringViewVsBuffer_Same) {
     FixedFormatBuffer<64> buf;
     buf.Format("%s", "hello");
-    EXPECT_TRUE(std::string_view{"hello"} == buf);
-    EXPECT_FALSE(std::string_view{"hello"} != buf);
+    EXPECT_TRUE("hello" == buf);
+    EXPECT_FALSE("hello" != buf);
 }
 
 TEST(FixedFormatBuffer, OperatorEquals_StringViewVsBuffer_Different) {
     FixedFormatBuffer<64> buf;
     buf.Format("%s", "hello");
-    EXPECT_FALSE(std::string_view{"world"} == buf);
-    EXPECT_TRUE(std::string_view{"world"} != buf);
+    EXPECT_FALSE("world" == buf);
+    EXPECT_TRUE("world" != buf);
 }
 
 TEST(FixedFormatBuffer, OperatorEquals_DifferentPositions) {

@@ -13,7 +13,7 @@ set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${FFB_HEADER}")
 
 project(fixed_format_buffer VERSION ${FFB_VERSION} LANGUAGES CXX)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -26,7 +26,7 @@ target_include_directories(fixed_format_buffer INTERFACE
     $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
     $<INSTALL_INTERFACE:include>
 )
-target_compile_features(fixed_format_buffer INTERFACE cxx_std_17)
+target_compile_features(fixed_format_buffer INTERFACE cxx_std_14)
 
 enable_testing()
 add_subdirectory(tests)

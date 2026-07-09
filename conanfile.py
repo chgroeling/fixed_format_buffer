@@ -31,7 +31,7 @@ class FixedFormatBufferConan(ConanFile):
         cmake_layout(self)
 
     def requirements(self):
-        self.test_requires("gtest/1.17.0")
+        self.test_requires("gtest/1.14.0")
 
     def build_requirements(self):
         self.tool_requires("cmake/4.3.3")

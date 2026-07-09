@@ -3,7 +3,6 @@
 #include <climits>
 #include <cstdint>
 #include <cstring>
-#include <string_view>
 
 #include <gtest/gtest.h>
 
@@ -24,7 +23,7 @@ using ffb::FixedFormatBuffer;
 // ---------------------------------------------------------------------------
 template <std::size_t N>
 struct Guarded {
-    static constexpr uint8_t kFill = 0xCC;
+    enum : uint8_t { kFill = 0xCC };
 
     uint8_t before[16];
     FixedFormatBuffer<N> buf;

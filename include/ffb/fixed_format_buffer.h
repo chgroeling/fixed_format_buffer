@@ -6,7 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <limits>
-#include <string_view>
+#include <cstring>
 #include <type_traits>
 
 /// @name Library version
@@ -24,13 +24,13 @@
 namespace ffb {
 
 /// Major version component, matching #FFB_VERSION_MAJOR.
-inline constexpr int kVersionMajor{FFB_VERSION_MAJOR};
+constexpr int kVersionMajor{FFB_VERSION_MAJOR};
 /// Minor version component, matching #FFB_VERSION_MINOR.
-inline constexpr int kVersionMinor{FFB_VERSION_MINOR};
+constexpr int kVersionMinor{FFB_VERSION_MINOR};
 /// Patch version component, matching #FFB_VERSION_PATCH.
-inline constexpr int kVersionPatch{FFB_VERSION_PATCH};
+constexpr int kVersionPatch{FFB_VERSION_PATCH};
 /// Full version string, e.g. "0.1.1", matching #FFB_VERSION_STRING.
-inline constexpr std::string_view kVersion{FFB_VERSION_STRING};
+constexpr const char* kVersion{FFB_VERSION_STRING};
 
 /// Default buffer policy: all formatting features enabled.
 ///
@@ -167,7 +167,7 @@ class FixedFormatBuffer {
 public:
     /// Maximum number of characters the buffer can hold (excluding null
     /// terminator).
-    static constexpr std::size_t CAPACITY = N;
+    enum : std::size_t { CAPACITY = N };
 
     FixedFormatBuffer() noexcept { buffer_[0] = '\0'; }
 
@@ -203,6 +203,51 @@ public:
     }
 
     ~FixedFormatBuffer() = default;
+
+    /// Compile-time argument type whitelist.
+    ///
+    /// Integer arguments wider than the policy types (which would cause
+    /// undefined behaviour when read by va_arg via the default no-modifier
+    /// path) are rejected at compile time.  Use length modifiers (%ld,
+    /// %lld, …) with a policy whose IntType/UIntType is at least as wide.
+    static constexpr std::size_t kMaxSafeArgSize =
+        (sizeof(typename Policy::IntType) > sizeof(typename Policy::UIntType))
+            ? sizeof(typename Policy::IntType)
+            : sizeof(typename Policy::UIntType);
+
+    /// Maximum safe width for floating-point arguments.
+    /// Rejects @c double when the policy uses @c float, etc.
+    static constexpr std::size_t kMaxSafeFloatSize = sizeof(typename Policy::FloatType);
+
+    template <typename T>
+    static constexpr bool kIsValidFormatArg =
+        std::is_same<T, char>::value || std::is_same<T, signed char>::value ||
+        std::is_same<T, unsigned char>::value || std::is_same<T, short>::value ||
+        std::is_same<T, unsigned short>::value || std::is_same<T, int>::value ||
+        std::is_same<T, unsigned int>::value || std::is_same<T, int16_t>::value ||
+        std::is_same<T, uint16_t>::value || std::is_same<T, int32_t>::value || std::is_same<T, uint32_t>::value ||
+        (std::is_same<T, long>::value && sizeof(long) <= kMaxSafeArgSize) ||
+        (std::is_same<T, unsigned long>::value && sizeof(unsigned long) <= kMaxSafeArgSize) ||
+        (std::is_same<T, long long>::value && sizeof(long long) <= kMaxSafeArgSize) ||
+        (std::is_same<T, unsigned long long>::value && sizeof(unsigned long long) <= kMaxSafeArgSize) ||
+        (std::is_same<T, int64_t>::value && sizeof(int64_t) <= kMaxSafeArgSize) ||
+        (std::is_same<T, uint64_t>::value && sizeof(uint64_t) <= kMaxSafeArgSize) ||
+        std::is_same<T, float>::value ||
+        (std::is_same<T, double>::value && sizeof(double) <= kMaxSafeFloatSize) ||
+        (std::is_same<T, long double>::value && sizeof(long double) <= kMaxSafeFloatSize) ||
+        std::is_same<T, const char*>::value || std::is_same<T, char*>::value ||
+        std::is_same<T, std::nullptr_t>::value;
+
+    /// C++14 emulation of (kIsValidFormatArg<Args> && ...) fold expression.
+    template <typename... Args>
+    static constexpr bool CheckAllValid() {
+        const bool results[] = {kIsValidFormatArg<Args>...};
+        for (std::size_t i{0U}; i < sizeof...(Args); ++i) {
+            if (!results[i])
+                return false;
+        }
+        return true;
+    }
 
     /// Variadic format. All arguments must be integral, floating-point,
     /// @c const @c char*, @c char*, or @c std::nullptr_t — passing
@@ -256,7 +301,7 @@ public:
     /// @return Number of characters written (excluding null terminator).
     template <typename... Args>
     std::size_t Format(const char* fmt, Args... args) noexcept {
-        static_assert((kIsValidFormatArg<Args> && ...),
+        static_assert(CheckAllValid<Args...>(),
                       "Format argument type not supported. "
                       "Use integer, floating-point, or const char* types.");
         return FormatVa(fmt, args...);
@@ -269,14 +314,14 @@ public:
     }
 
     /// Return the number of characters currently stored.
-    [[nodiscard]] std::size_t Size() const noexcept { return size_; }
+    std::size_t Size() const noexcept { return size_; }
 
     /// Return true if the buffer is empty.
-    [[nodiscard]] bool Empty() const noexcept { return size_ == 0; }
+    bool Empty() const noexcept { return size_ == 0; }
 
     /// Return a null-terminated C-string over the current contents.
     /// Valid only until the buffer is modified or destroyed.
-    [[nodiscard]] const char* CStr() const noexcept { return buffer_.data(); }
+    const char* CStr() const noexcept { return buffer_.data(); }
 
     /// Write a raw null-terminated string (no formatting) to the buffer,
     /// overwriting existing content. Silently truncates at capacity.
@@ -318,68 +363,32 @@ public:
     /// @see Format()
     template <typename... Args>
     std::size_t Append(const char* fmt, Args... args) noexcept {
-        static_assert((kIsValidFormatArg<Args> && ...),
+        static_assert(CheckAllValid<Args...>(),
                       "Format argument type not supported. "
                       "Use integer, floating-point, or const char* types.");
         return AppendVa(fmt, args...);
     }
 
     friend bool operator==(const FixedFormatBuffer& a, const FixedFormatBuffer& b) noexcept {
-        return std::string_view{a.CStr()} == std::string_view{b.CStr()};
+        return std::strcmp(a.CStr(), b.CStr()) == 0;
     }
     friend bool operator!=(const FixedFormatBuffer& a, const FixedFormatBuffer& b) noexcept {
         return !(a == b);
     }
-    friend bool operator==(const FixedFormatBuffer& buf, std::string_view sv) noexcept {
-        return std::string_view{buf.CStr()} == sv;
+    friend bool operator==(const FixedFormatBuffer& buf, const char* sv) noexcept {
+        return sv && std::strcmp(buf.CStr(), sv) == 0;
     }
-    friend bool operator==(std::string_view sv, const FixedFormatBuffer& buf) noexcept {
-        return sv == std::string_view{buf.CStr()};
+    friend bool operator==(const char* sv, const FixedFormatBuffer& buf) noexcept {
+        return sv && std::strcmp(sv, buf.CStr()) == 0;
     }
-    friend bool operator!=(const FixedFormatBuffer& buf, std::string_view sv) noexcept {
-        return std::string_view{buf.CStr()} != sv;
+    friend bool operator!=(const FixedFormatBuffer& buf, const char* sv) noexcept {
+        return !sv || std::strcmp(buf.CStr(), sv) != 0;
     }
-    friend bool operator!=(std::string_view sv, const FixedFormatBuffer& buf) noexcept {
-        return sv != std::string_view{buf.CStr()};
+    friend bool operator!=(const char* sv, const FixedFormatBuffer& buf) noexcept {
+        return !sv || std::strcmp(sv, buf.CStr()) != 0;
     }
 
 private:
-    // -------------------------------------------------------------------------
-    // Compile-time argument type whitelist
-    //
-    // Integer arguments wider than the policy types (which would cause
-    // undefined behaviour when read by va_arg via the default no-modifier
-    // path) are rejected at compile time.  Use length modifiers (%ld,
-    // %lld, …) with a policy whose IntType/UIntType is at least as wide.
-    // -------------------------------------------------------------------------
-    static constexpr std::size_t kMaxSafeArgSize =
-        (sizeof(typename Policy::IntType) > sizeof(typename Policy::UIntType))
-            ? sizeof(typename Policy::IntType)
-            : sizeof(typename Policy::UIntType);
-
-    /// Maximum safe width for floating-point arguments.
-    /// Rejects @c double when the policy uses @c float, etc.
-    static constexpr std::size_t kMaxSafeFloatSize = sizeof(typename Policy::FloatType);
-
-    template <typename T>
-    static constexpr bool kIsValidFormatArg =
-        std::is_same_v<T, char> || std::is_same_v<T, signed char> ||
-        std::is_same_v<T, unsigned char> || std::is_same_v<T, short> ||
-        std::is_same_v<T, unsigned short> || std::is_same_v<T, int> ||
-        std::is_same_v<T, unsigned int> || std::is_same_v<T, int16_t> ||
-        std::is_same_v<T, uint16_t> || std::is_same_v<T, int32_t> || std::is_same_v<T, uint32_t> ||
-        (std::is_same_v<T, long> && sizeof(long) <= kMaxSafeArgSize) ||
-        (std::is_same_v<T, unsigned long> && sizeof(unsigned long) <= kMaxSafeArgSize) ||
-        (std::is_same_v<T, long long> && sizeof(long long) <= kMaxSafeArgSize) ||
-        (std::is_same_v<T, unsigned long long> && sizeof(unsigned long long) <= kMaxSafeArgSize) ||
-        (std::is_same_v<T, int64_t> && sizeof(int64_t) <= kMaxSafeArgSize) ||
-        (std::is_same_v<T, uint64_t> && sizeof(uint64_t) <= kMaxSafeArgSize) ||
-        std::is_same_v<T, float> ||
-        (std::is_same_v<T, double> && sizeof(double) <= kMaxSafeFloatSize) ||
-        (std::is_same_v<T, long double> && sizeof(long double) <= kMaxSafeFloatSize) ||
-        std::is_same_v<T, const char*> || std::is_same_v<T, char*> ||
-        std::is_same_v<T, std::nullptr_t>;
-
     /// C-variadic bridge — called by the template Format().
     std::size_t FormatVa(const char* fmt, ...) noexcept {
         va_list args;
@@ -1067,7 +1076,7 @@ private:
                 // to keep va_list aligned, but only format when the policy
                 // permits.
                 const FloatType v{ReadFloatArg(args, spec.len_mod)};
-                if constexpr (Policy::kSupportFloatingPointDecimals) {
+                if (Policy::kSupportFloatingPointDecimals) {
                     FormatFloatValue(g, spec, v);
                 }
                 break;
