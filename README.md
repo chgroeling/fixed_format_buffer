@@ -103,16 +103,23 @@ it is the most comprehensive usage reference:
 
 ## Custom policy types
 
-The default policy uses `int32_t` / `uint32_t`. A pre-built 64-bit policy
-(`ffb::HighPrecisionPolicy`) is available.  You can also define your own policy
-to control the integer width, floating-point type, or to disable float
-support entirely (`kSupportFloatingPointDecimals = false`).
+The default policy uses `int32_t` / `uint32_t`. Two pre-built policies are
+available: `ffb::HighPrecisionPolicy` (64-bit integers + double-precision
+floats) and `ffb::NoFloatPolicy` (float output disabled to save code space).
+You can also define your own policy to control the integer width,
+floating-point type, or to disable float support entirely
+(`kSupportFloatingPointDecimals = false`).
 
 ```cpp
 // Built-in 64-bit + double-precision policy:
 ffb::FixedFormatBuffer<32, ffb::HighPrecisionPolicy> buf;
 buf.Format("%u", UINT64_C(18446744073709551615));
 // → "18446744073709551615"
+
+// Built-in float-disabled policy: %f is consumed but produces no output.
+ffb::FixedFormatBuffer<32, ffb::NoFloatPolicy> buf1;
+buf1.Format("%f %d", 3.14f, 42);
+// → " 42"
 
 // Custom policy with double-precision floats:
 struct DoublePolicy {
