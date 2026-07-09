@@ -16,9 +16,9 @@
 /// these macros.
 /// @{
 #define FFB_VERSION_MAJOR 0
-#define FFB_VERSION_MINOR 1
-#define FFB_VERSION_PATCH 1
-#define FFB_VERSION_STRING "0.1.1"
+#define FFB_VERSION_MINOR 2
+#define FFB_VERSION_PATCH 0
+#define FFB_VERSION_STRING "0.2.0"
 /// @}
 
 namespace ffb {
