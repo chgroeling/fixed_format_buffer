@@ -406,6 +406,15 @@ private:
         L,   ///< @c L  — long double
     };
 
+    /// Fully parsed conversion specification (everything between @c % and the
+    /// specifier letter). Populated by the Parse* helpers before dispatch.
+    struct FormatSpec {
+        FormatFlags flags{};
+        std::size_t width{0U};
+        std::size_t precision{Policy::kDefaultFloatPrecision};
+        LengthMod len_mod{LengthMod::None};
+    };
+
     // -------------------------------------------------------------------------
     // Output gadget
     //
@@ -445,6 +454,40 @@ private:
     static Gadget MakeCountingGadget() noexcept {
         // max_chars == 0 ensures Put() never dereferences buf.
         return Gadget{nullptr, 0U, 0U};
+    }
+
+    /// Emit @p write_content with space padding to @p width, honouring the
+    /// left/right justification. The writer is invoked once against a counting
+    /// gadget to measure its length, then again against the real gadget.
+    template <typename WriteContent>
+    static void EmitSpacePadded(Gadget& g,
+                                std::size_t width,
+                                bool left_justify,
+                                WriteContent write_content) noexcept {
+        Gadget dry{MakeCountingGadget()};
+        write_content(dry);
+        if (!left_justify)
+            EmitPadding(g, width, dry.pos);
+        write_content(g);
+        if (left_justify)
+            EmitPadding(g, width, dry.pos);
+    }
+
+    /// Emit a right-justified, zero-padded numeric value. The sign/prefix
+    /// (@p write_prefix) is emitted before the zero fill; the magnitude
+    /// (@p write_magnitude) follows. Padding is measured against the combined
+    /// prefix + magnitude length.
+    template <typename WritePrefix, typename WriteMagnitude>
+    static void EmitZeroPadded(Gadget& g,
+                               std::size_t width,
+                               WritePrefix write_prefix,
+                               WriteMagnitude write_magnitude) noexcept {
+        Gadget dry{MakeCountingGadget()};
+        write_prefix(dry);
+        write_magnitude(dry);
+        write_prefix(g);
+        EmitPadding(g, width, dry.pos, '0');
+        write_magnitude(g);
     }
 
     static void WriteRaw(Gadget& g, const char* s, std::size_t len) noexcept {
@@ -717,6 +760,304 @@ private:
     }
 
     // -------------------------------------------------------------------------
+    // Specifier parsing (each helper advances @p fmt past what it consumes)
+    // -------------------------------------------------------------------------
+
+    /// Parse the flag characters. @c - / @c + / @c space / @c 0 / @c # are
+    /// recognised; unknown characters stop parsing.
+    static FormatFlags ParseFlags(const char*& fmt) noexcept {
+        FormatFlags flags{};
+        while (*fmt == '-' || *fmt == '+' || *fmt == ' ' || *fmt == '0' || *fmt == '#') {
+            if (*fmt == '-')
+                flags.left_justify = true;
+            if (*fmt == '+')
+                flags.show_sign = true;
+            if (*fmt == ' ')
+                flags.space_flag = true;
+            if (*fmt == '0')
+                flags.zero_pad = true;
+            if (*fmt == '#')
+                flags.alternate_form = true;
+            ++fmt;
+        }
+        return flags;
+    }
+
+    /// Parse the field width. The first digit must be 1-9 (distinguishing width
+    /// from the @c 0 flag); @c * reads the width from the argument list, and a
+    /// negative @c * width forces left-justification (updating @p flags).
+    static std::size_t ParseWidth(const char*& fmt, va_list& args, FormatFlags& flags) noexcept {
+        std::size_t width{0U};
+        if (*fmt == '*') {
+            ++fmt;
+            const int w{va_arg(args, int)};
+            if (w < 0) {
+                flags.left_justify = true;
+                width = static_cast<std::size_t>(-w);
+            } else {
+                width = static_cast<std::size_t>(w);
+            }
+        } else if (*fmt >= '1' && *fmt <= '9') {
+            width = static_cast<std::size_t>(*fmt++ - '0');
+            while (*fmt >= '0' && *fmt <= '9')
+                width = width * 10U + static_cast<std::size_t>(*fmt++ - '0');
+        }
+        return width;
+    }
+
+    /// Parse the @c .precision field. Absent precision yields the policy
+    /// default; @c * reads it from the argument list (negative means "omitted").
+    /// Values above @c Policy::kMaxFloatPrecision are clamped.
+    static std::size_t ParsePrecision(const char*& fmt, va_list& args) noexcept {
+        std::size_t precision{Policy::kDefaultFloatPrecision};
+        if (*fmt == '.') {
+            ++fmt;
+            if (*fmt == '*') {
+                ++fmt;
+                const int p{va_arg(args, int)};
+                if (p < 0)
+                    precision = Policy::kDefaultFloatPrecision;
+                else if (static_cast<std::size_t>(p) > Policy::kMaxFloatPrecision)
+                    precision = Policy::kMaxFloatPrecision;
+                else
+                    precision = static_cast<std::size_t>(p);
+            } else {
+                precision = 0U;
+                while (*fmt >= '0' && *fmt <= '9') {
+                    precision = precision * 10U + static_cast<std::size_t>(*fmt++ - '0');
+                    if (precision > Policy::kMaxFloatPrecision) {
+                        precision = Policy::kMaxFloatPrecision;
+                        while (*fmt >= '0' && *fmt <= '9')
+                            ++fmt;  // drain remaining digits
+                        break;
+                    }
+                }
+            }
+        }
+        return precision;
+    }
+
+    /// Parse the length modifier (@c hh @c h @c l @c ll @c j @c z @c t @c L).
+    static LengthMod ParseLengthMod(const char*& fmt) noexcept {
+        switch (*fmt) {
+            case 'h':
+                ++fmt;
+                if (*fmt == 'h') {
+                    ++fmt;
+                    return LengthMod::hh;
+                }
+                return LengthMod::h;
+            case 'l':
+                ++fmt;
+                if (*fmt == 'l') {
+                    ++fmt;
+                    return LengthMod::ll;
+                }
+                return LengthMod::l;
+            case 'j':
+                ++fmt;
+                return LengthMod::j;
+            case 'z':
+                ++fmt;
+                return LengthMod::z;
+            case 't':
+                ++fmt;
+                return LengthMod::t;
+            case 'L':
+                ++fmt;
+                return LengthMod::L;
+            default:
+                return LengthMod::None;
+        }
+    }
+
+    // -------------------------------------------------------------------------
+    // Per-specifier formatting (apply width/precision/flags to a single value)
+    // -------------------------------------------------------------------------
+
+    /// @c %c — a single character, optionally space-padded to width.
+    static void FormatChar(Gadget& g, const FormatSpec& spec, char c) noexcept {
+        if (spec.width > 0U) {
+            EmitSpacePadded(
+                g, spec.width, spec.flags.left_justify, [c](Gadget& out) { out.Put(c); });
+        } else {
+            g.Put(c);
+        }
+    }
+
+    /// @c %s — a null-terminated string, optionally space-padded to width.
+    static void FormatStr(Gadget& g, const FormatSpec& spec, const char* s) noexcept {
+        if (spec.width > 0U) {
+            EmitSpacePadded(
+                g, spec.width, spec.flags.left_justify, [s](Gadget& out) { WriteString(out, s); });
+        } else {
+            WriteString(g, s);
+        }
+    }
+
+    /// @c %d / @c %i — signed decimal, honouring sign, width and zero-padding.
+    static void FormatSignedInt(Gadget& g, const FormatSpec& spec, IntType v) noexcept {
+        const bool show_sign{spec.flags.show_sign};
+        const bool space_flag{spec.flags.space_flag};
+        if (spec.width > 0U && spec.flags.zero_pad && !spec.flags.left_justify) {
+            EmitZeroPadded(
+                g,
+                spec.width,
+                [v, show_sign, space_flag](Gadget& out) {
+                    if (v < IntType(0))
+                        out.Put('-');
+                    else if (show_sign)
+                        out.Put('+');
+                    else if (space_flag)
+                        out.Put(' ');
+                },
+                [v](Gadget& out) { WriteUnsigned(out, AbsAsU64(v)); });
+        } else if (spec.width > 0U) {
+            EmitSpacePadded(
+                g, spec.width, spec.flags.left_justify, [v, show_sign, space_flag](Gadget& out) {
+                    WriteInt(out, v, show_sign, space_flag);
+                });
+        } else {
+            WriteInt(g, v, show_sign, space_flag);
+        }
+    }
+
+    /// @c %u — unsigned decimal, honouring width and zero-padding.
+    static void FormatUnsignedInt(Gadget& g, const FormatSpec& spec, UIntType v) noexcept {
+        if (spec.width > 0U && spec.flags.zero_pad && !spec.flags.left_justify) {
+            EmitZeroPadded(
+                g, spec.width, [](Gadget&) {}, [v](Gadget& out) { WriteUnsigned(out, v); });
+        } else if (spec.width > 0U) {
+            EmitSpacePadded(g, spec.width, spec.flags.left_justify, [v](Gadget& out) {
+                WriteUnsigned(out, v);
+            });
+        } else {
+            WriteUnsigned(g, v);
+        }
+    }
+
+    /// @c %x / @c %X — hexadecimal, honouring the @c # prefix, width and
+    /// zero-padding. @p uppercase selects the digit case and @c 0X prefix.
+    static void FormatHex(Gadget& g, const FormatSpec& spec, UIntType v, bool uppercase) noexcept {
+        const bool use_prefix{spec.flags.alternate_form && v != UIntType(0)};
+        const char prefix_char{uppercase ? 'X' : 'x'};
+        const auto write_prefix{[use_prefix, prefix_char](Gadget& out) {
+            if (use_prefix) {
+                out.Put('0');
+                out.Put(prefix_char);
+            }
+        }};
+        if (spec.width > 0U && spec.flags.zero_pad && !spec.flags.left_justify) {
+            EmitZeroPadded(g, spec.width, write_prefix, [v, uppercase](Gadget& out) {
+                WriteHex(out, v, uppercase);
+            });
+        } else if (spec.width > 0U) {
+            EmitSpacePadded(
+                g, spec.width, spec.flags.left_justify, [v, uppercase, write_prefix](Gadget& out) {
+                    write_prefix(out);
+                    WriteHex(out, v, uppercase);
+                });
+        } else {
+            write_prefix(g);
+            WriteHex(g, v, uppercase);
+        }
+    }
+
+    /// @c %f — decimal float, honouring sign, precision, width and
+    /// zero-padding. Zero-padding only applies to finite values; nan/inf/ovf
+    /// fall back to space padding so their sign words stay intact.
+    static void FormatFloatValue(Gadget& g, const FormatSpec& spec, FloatType v) noexcept {
+        const bool show_sign{spec.flags.show_sign};
+        const bool space_flag{spec.flags.space_flag};
+        const bool alternate_form{spec.flags.alternate_form};
+        const std::size_t precision{spec.precision};
+
+        if (spec.width > 0U && spec.flags.zero_pad && !spec.flags.left_justify) {
+            const bool is_normal{v == v && v >= -std::numeric_limits<FloatType>::max() &&
+                                 v <= std::numeric_limits<FloatType>::max() &&
+                                 v > -kMaxSafeIntegral && v < kMaxSafeIntegral};
+            Gadget dry{MakeCountingGadget()};
+            WriteFloat(dry, v, precision, show_sign, true, alternate_form, space_flag);
+            if (is_normal) {
+                if (v < FloatType(0))
+                    g.Put('-');
+                else if (show_sign)
+                    g.Put('+');
+                else if (space_flag)
+                    g.Put(' ');
+                EmitPadding(g, spec.width, dry.pos, '0');
+                WriteFloat(g, v, precision, show_sign, false, alternate_form, space_flag);
+            } else {
+                EmitPadding(g, spec.width, dry.pos);
+                WriteFloat(g, v, precision, show_sign, true, alternate_form, space_flag);
+            }
+        } else if (spec.width > 0U) {
+            EmitSpacePadded(g,
+                            spec.width,
+                            spec.flags.left_justify,
+                            [v, precision, show_sign, alternate_form, space_flag](Gadget& out) {
+                                WriteFloat(
+                                    out, v, precision, show_sign, true, alternate_form, space_flag);
+                            });
+        } else {
+            WriteFloat(g, v, precision, show_sign, true, alternate_form, space_flag);
+        }
+    }
+
+    /// Read the argument for @p fmt's specifier and format it into @p g.
+    /// @p fmt points at the specifier letter.
+    void DispatchSpecifier(Gadget& g,
+                           const char* fmt,
+                           va_list& args,
+                           const FormatSpec& spec) noexcept {
+        switch (*fmt) {
+            case 'c': {
+                // char promotes to int in variadic calls.
+                const char c{static_cast<char>(va_arg(args, int))};
+                FormatChar(g, spec, c);
+                break;
+            }
+            case 's': {
+                const char* s{va_arg(args, const char*)};
+                FormatStr(g, spec, s);
+                break;
+            }
+            case 'd':
+            case 'i':
+                FormatSignedInt(g, spec, ReadSignedArg(args, spec.len_mod));
+                break;
+            case 'u':
+                FormatUnsignedInt(g, spec, ReadUnsignedArg(args, spec.len_mod));
+                break;
+            case 'x':
+                FormatHex(g, spec, ReadUnsignedArg(args, spec.len_mod), false);
+                break;
+            case 'X':
+                FormatHex(g, spec, ReadUnsignedArg(args, spec.len_mod), true);
+                break;
+            case 'f': {
+                // Variadic args promote float→double; cast back to FloatType
+                // for policy-controlled precision. Always consume the argument
+                // to keep va_list aligned, but only format when the policy
+                // permits.
+                const FloatType v{ReadFloatArg(args, spec.len_mod)};
+                if constexpr (Policy::kSupportFloatingPointDecimals) {
+                    FormatFloatValue(g, spec, v);
+                }
+                break;
+            }
+            case '%':
+                g.Put('%');
+                break;
+            default:
+                // Unknown specifier: emit literally (%?)
+                g.Put('%');
+                g.Put(*fmt);
+                break;
+        }
+    }
+
+    // -------------------------------------------------------------------------
     // Core format loop
     // -------------------------------------------------------------------------
 
@@ -733,342 +1074,15 @@ private:
             if (!*fmt)
                 break;
 
-            // --- Flags ---
-            // '-' (left-justify) and '+' (show_sign) are acted upon; others are
-            // recognised but ignored.
-            FormatFlags flags{};
-            while (*fmt == '-' || *fmt == '+' || *fmt == ' ' || *fmt == '0' || *fmt == '#') {
-                if (*fmt == '-')
-                    flags.left_justify = true;
-                if (*fmt == '+')
-                    flags.show_sign = true;
-                if (*fmt == ' ')
-                    flags.space_flag = true;
-                if (*fmt == '0')
-                    flags.zero_pad = true;
-                if (*fmt == '#')
-                    flags.alternate_form = true;
-                ++fmt;
-            }
+            // Parse the conversion spec: %[flags][width][.precision][length].
+            FormatSpec spec{};
+            spec.flags = ParseFlags(fmt);
+            spec.width = ParseWidth(fmt, args, spec.flags);
+            spec.precision = ParsePrecision(fmt, args);
+            spec.len_mod = ParseLengthMod(fmt);
 
-            // --- Width (space-padded; left or right depending on justification) ---
-            // First digit must be 1-9 (distinguishes width from flag '0'),
-            // subsequent digits may include 0.  '*' reads width from argument list.
-            std::size_t width{0U};
-            if (*fmt == '*') {
-                ++fmt;
-                const int w{va_arg(args, int)};
-                if (w < 0) {
-                    flags.left_justify = true;
-                    width = static_cast<std::size_t>(-w);
-                } else
-                    width = static_cast<std::size_t>(w);
-            } else if (*fmt >= '1' && *fmt <= '9') {
-                width = static_cast<std::size_t>(*fmt++ - '0');
-                while (*fmt >= '0' && *fmt <= '9')
-                    width = width * 10U + static_cast<std::size_t>(*fmt++ - '0');
-            }
-
-            // --- Precision (.digits, e.g. "%.2f") ---
-            // '*' reads precision from argument list.
-            std::size_t precision{Policy::kDefaultFloatPrecision};
-            if (*fmt == '.') {
-                ++fmt;
-                if (*fmt == '*') {
-                    ++fmt;
-                    const int p{va_arg(args, int)};
-                    if (p < 0)
-                        precision = Policy::kDefaultFloatPrecision;
-                    else if (static_cast<std::size_t>(p) > Policy::kMaxFloatPrecision)
-                        precision = Policy::kMaxFloatPrecision;
-                    else
-                        precision = static_cast<std::size_t>(p);
-                } else {
-                    precision = 0U;
-                    while (*fmt >= '0' && *fmt <= '9') {
-                        precision = precision * 10U + static_cast<std::size_t>(*fmt++ - '0');
-                        if (precision > Policy::kMaxFloatPrecision) {
-                            precision = Policy::kMaxFloatPrecision;
-                            while (*fmt >= '0' && *fmt <= '9')
-                                ++fmt;  // drain remaining digits
-                            break;
-                        }
-                    }
-                }
-            }
-
-            // --- Length modifier ---
-            LengthMod len_mod{LengthMod::None};
-            if (*fmt == 'h') {
-                ++fmt;
-                if (*fmt == 'h') {
-                    ++fmt;
-                    len_mod = LengthMod::hh;
-                } else
-                    len_mod = LengthMod::h;
-            } else if (*fmt == 'l') {
-                ++fmt;
-                if (*fmt == 'l') {
-                    ++fmt;
-                    len_mod = LengthMod::ll;
-                } else
-                    len_mod = LengthMod::l;
-            } else if (*fmt == 'j') {
-                ++fmt;
-                len_mod = LengthMod::j;
-            } else if (*fmt == 'z') {
-                ++fmt;
-                len_mod = LengthMod::z;
-            } else if (*fmt == 't') {
-                ++fmt;
-                len_mod = LengthMod::t;
-            } else if (*fmt == 'L') {
-                ++fmt;
-                len_mod = LengthMod::L;
-            }
-
-            switch (*fmt) {
-                case 'c': {
-                    // char promotes to int in variadic calls.
-                    const char c{static_cast<char>(va_arg(args, int))};
-                    if (width > 0U) {
-                        if (!flags.left_justify)
-                            EmitPadding(g, width, 1U);
-                        g.Put(c);
-                        if (flags.left_justify)
-                            EmitPadding(g, width, 1U);
-                    } else {
-                        g.Put(c);
-                    }
-                    break;
-                }
-                case 's': {
-                    const char* s{va_arg(args, const char*)};
-                    if (width > 0U) {
-                        Gadget dry{MakeCountingGadget()};
-                        WriteString(dry, s);
-                        if (!flags.left_justify)
-                            EmitPadding(g, width, dry.pos);
-                        WriteString(g, s);
-                        if (flags.left_justify)
-                            EmitPadding(g, width, dry.pos);
-                    } else {
-                        WriteString(g, s);
-                    }
-                    break;
-                }
-                case 'd':
-                case 'i': {
-                    const IntType v{ReadSignedArg(args, len_mod)};
-                    if (width > 0U && flags.zero_pad && !flags.left_justify) {
-                        Gadget dry{MakeCountingGadget()};
-                        WriteInt(dry, v, flags.show_sign, flags.space_flag);
-                        if (v < IntType(0))
-                            g.Put('-');
-                        else if (flags.show_sign)
-                            g.Put('+');
-                        else if (flags.space_flag)
-                            g.Put(' ');
-                        EmitPadding(g, width, dry.pos, '0');
-                        WriteUnsigned(g, AbsAsU64(v));
-                    } else if (width > 0U) {
-                        Gadget dry{MakeCountingGadget()};
-                        WriteInt(dry, v, flags.show_sign, flags.space_flag);
-                        if (!flags.left_justify)
-                            EmitPadding(g, width, dry.pos);
-                        WriteInt(g, v, flags.show_sign, flags.space_flag);
-                        if (flags.left_justify)
-                            EmitPadding(g, width, dry.pos);
-                    } else {
-                        WriteInt(g, v, flags.show_sign, flags.space_flag);
-                    }
-                    break;
-                }
-                case 'f': {
-                    // Variadic args promote float→double; cast back to FloatType
-                    // for policy-controlled precision.
-                    // Always consume the argument to keep va_list aligned,
-                    // but only format it when the policy permits.
-                    const FloatType v{ReadFloatArg(args, len_mod)};
-                    if constexpr (Policy::kSupportFloatingPointDecimals) {
-                        if (width > 0U && flags.zero_pad && !flags.left_justify) {
-                            const bool is_normal{v == v &&
-                                                 v >= -std::numeric_limits<FloatType>::max() &&
-                                                 v <= std::numeric_limits<FloatType>::max() &&
-                                                 v > -kMaxSafeIntegral && v < kMaxSafeIntegral};
-                            Gadget dry{MakeCountingGadget()};
-                            WriteFloat(dry,
-                                       v,
-                                       precision,
-                                       flags.show_sign,
-                                       true,
-                                       flags.alternate_form,
-                                       flags.space_flag);
-                            if (is_normal) {
-                                if (v < FloatType(0))
-                                    g.Put('-');
-                                else if (flags.show_sign)
-                                    g.Put('+');
-                                else if (flags.space_flag)
-                                    g.Put(' ');
-                                EmitPadding(g, width, dry.pos, '0');
-                                WriteFloat(g,
-                                           v,
-                                           precision,
-                                           flags.show_sign,
-                                           false,
-                                           flags.alternate_form,
-                                           flags.space_flag);
-                            } else {
-                                if (!flags.left_justify)
-                                    EmitPadding(g, width, dry.pos);
-                                WriteFloat(g,
-                                           v,
-                                           precision,
-                                           flags.show_sign,
-                                           true,
-                                           flags.alternate_form,
-                                           flags.space_flag);
-                                if (flags.left_justify)
-                                    EmitPadding(g, width, dry.pos);
-                            }
-                        } else if (width > 0U) {
-                            Gadget dry{MakeCountingGadget()};
-                            WriteFloat(dry,
-                                       v,
-                                       precision,
-                                       flags.show_sign,
-                                       true,
-                                       flags.alternate_form,
-                                       flags.space_flag);
-                            if (!flags.left_justify)
-                                EmitPadding(g, width, dry.pos);
-                            WriteFloat(g,
-                                       v,
-                                       precision,
-                                       flags.show_sign,
-                                       true,
-                                       flags.alternate_form,
-                                       flags.space_flag);
-                            if (flags.left_justify)
-                                EmitPadding(g, width, dry.pos);
-                        } else {
-                            WriteFloat(g,
-                                       v,
-                                       precision,
-                                       flags.show_sign,
-                                       true,
-                                       flags.alternate_form,
-                                       flags.space_flag);
-                        }
-                    }
-                    break;
-                }
-                case 'u': {
-                    const UIntType v{ReadUnsignedArg(args, len_mod)};
-                    if (width > 0U && flags.zero_pad && !flags.left_justify) {
-                        Gadget dry{MakeCountingGadget()};
-                        WriteUnsigned(dry, v);
-                        EmitPadding(g, width, dry.pos, '0');
-                        WriteUnsigned(g, v);
-                    } else if (width > 0U) {
-                        Gadget dry{MakeCountingGadget()};
-                        WriteUnsigned(dry, v);
-                        if (!flags.left_justify)
-                            EmitPadding(g, width, dry.pos);
-                        WriteUnsigned(g, v);
-                        if (flags.left_justify)
-                            EmitPadding(g, width, dry.pos);
-                    } else {
-                        WriteUnsigned(g, v);
-                    }
-                    break;
-                }
-                case 'x': {
-                    const UIntType v{ReadUnsignedArg(args, len_mod)};
-                    const bool use_prefix{flags.alternate_form && v != UIntType(0)};
-                    if (width > 0U && flags.zero_pad && !flags.left_justify) {
-                        Gadget dry{MakeCountingGadget()};
-                        WriteHex(dry, v);
-                        const std::size_t content_len{dry.pos + (use_prefix ? 2U : 0U)};
-                        if (use_prefix) {
-                            g.Put('0');
-                            g.Put('x');
-                        }
-                        EmitPadding(g, width, content_len, '0');
-                        WriteHex(g, v);
-                    } else if (width > 0U) {
-                        Gadget dry{MakeCountingGadget()};
-                        if (use_prefix) {
-                            dry.Put('0');
-                            dry.Put('x');
-                        }
-                        WriteHex(dry, v);
-                        if (!flags.left_justify)
-                            EmitPadding(g, width, dry.pos);
-                        if (use_prefix) {
-                            g.Put('0');
-                            g.Put('x');
-                        }
-                        WriteHex(g, v);
-                        if (flags.left_justify)
-                            EmitPadding(g, width, dry.pos);
-                    } else {
-                        if (use_prefix) {
-                            g.Put('0');
-                            g.Put('x');
-                        }
-                        WriteHex(g, v);
-                    }
-                    break;
-                }
-                case 'X': {
-                    const UIntType v{ReadUnsignedArg(args, len_mod)};
-                    const bool use_prefix{flags.alternate_form && v != UIntType(0)};
-                    if (width > 0U && flags.zero_pad && !flags.left_justify) {
-                        Gadget dry{MakeCountingGadget()};
-                        WriteHex(dry, v, true);
-                        const std::size_t content_len{dry.pos + (use_prefix ? 2U : 0U)};
-                        if (use_prefix) {
-                            g.Put('0');
-                            g.Put('X');
-                        }
-                        EmitPadding(g, width, content_len, '0');
-                        WriteHex(g, v, true);
-                    } else if (width > 0U) {
-                        Gadget dry{MakeCountingGadget()};
-                        if (use_prefix) {
-                            dry.Put('0');
-                            dry.Put('X');
-                        }
-                        WriteHex(dry, v, true);
-                        if (!flags.left_justify)
-                            EmitPadding(g, width, dry.pos);
-                        if (use_prefix) {
-                            g.Put('0');
-                            g.Put('X');
-                        }
-                        WriteHex(g, v, true);
-                        if (flags.left_justify)
-                            EmitPadding(g, width, dry.pos);
-                    } else {
-                        if (use_prefix) {
-                            g.Put('0');
-                            g.Put('X');
-                        }
-                        WriteHex(g, v, true);
-                    }
-                    break;
-                }
-                case '%':
-                    g.Put('%');
-                    break;
-                default:
-                    // Unknown specifier: emit literally (%?)
-                    g.Put('%');
-                    g.Put(*fmt);
-                    break;
-            }
+            // fmt now points at the specifier letter.
+            DispatchSpecifier(g, fmt, args, spec);
             ++fmt;
         }
 
