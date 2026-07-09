@@ -176,6 +176,8 @@ public:
         return *this;
     }
 
+    ~FixedFormatBuffer() = default;
+
     /// Variadic format. All arguments must be integral, floating-point,
     /// @c const @c char*, @c char*, or @c std::nullptr_t — passing
     /// @c std::string or other non-trivial types is rejected at compile
