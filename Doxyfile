@@ -1,6 +1,6 @@
 PROJECT_NAME           = fixed_format_buffer
 PROJECT_BRIEF          = "Allocation-free fixed-capacity formatting buffer for embedded C++"
-PROJECT_NUMBER         = 0.1.0
+PROJECT_NUMBER         =
 
 OUTPUT_DIRECTORY       = docs
 

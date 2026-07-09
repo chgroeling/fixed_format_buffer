@@ -3,10 +3,32 @@ name: CI
 on:
   push:
     branches: [main]
+    tags: ["v*"]
   pull_request:
     branches: [main]
 
 jobs:
+  version-check:
+    name: Verify tag matches header version
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Compare tag with header version
+        run: |
+          hdr="include/ffb/fixed_format_buffer.h"
+          maj=$(grep -oP '#define FFB_VERSION_MAJOR \K[0-9]+' "$hdr")
+          min=$(grep -oP '#define FFB_VERSION_MINOR \K[0-9]+' "$hdr")
+          pat=$(grep -oP '#define FFB_VERSION_PATCH \K[0-9]+' "$hdr")
+          str=$(grep -oP '#define FFB_VERSION_STRING "\K[^"]+' "$hdr")
+          hdr_version="$maj.$min.$pat"
+          tag_version="${GITHUB_REF_NAME#v}"
+          echo "header=$hdr_version string=$str tag=$tag_version"
+          test "$hdr_version" = "$str"
+          test "$hdr_version" = "$tag_version"
+
   build-and-test:
     name: ${{ matrix.compiler.name }} (${{ matrix.build_type }})
     runs-on: ubuntu-latest

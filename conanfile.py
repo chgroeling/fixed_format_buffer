@@ -1,3 +1,6 @@
+import os
+import re
+
 from conan import ConanFile
 from conan.tools.cmake import CMakeToolchain, CMakeDeps, cmake_layout
 from conan.tools.files import copy
@@ -5,10 +8,9 @@ from conan.tools.files import copy
 
 class FixedFormatBufferConan(ConanFile):
     name = "fixed_format_buffer"
-    version = "0.1.0"
     license = "MIT"
-    author = ""
-    url = ""
+    author = "Christian Gröling <contact@christiangroeling.de>"
+    url = "https://github.com/chgroeling/fixed_format_buffer"
     description = "Allocation-free fixed-capacity formatting buffer for embedded C++"
     topics = ("embedded", "formatting", "printf", "header-only")
 
@@ -16,6 +18,14 @@ class FixedFormatBufferConan(ConanFile):
     settings = "os", "compiler", "build_type", "arch"
 
     exports_sources = "include/**"
+
+    def set_version(self):
+        header = os.path.join(self.recipe_folder, "include", "ffb", "fixed_format_buffer.h")
+        text = open(header).read()
+        major = re.search(r"#define FFB_VERSION_MAJOR (\d+)", text).group(1)
+        minor = re.search(r"#define FFB_VERSION_MINOR (\d+)", text).group(1)
+        patch = re.search(r"#define FFB_VERSION_PATCH (\d+)", text).group(1)
+        self.version = f"{major}.{minor}.{patch}"
 
     def layout(self):
         cmake_layout(self)

@@ -9,7 +9,28 @@
 #include <string_view>
 #include <type_traits>
 
+/// @name Library version
+/// Canonical version of the library. As this is a header-only library that
+/// may be copied directly into a project, the header itself is the single
+/// source of truth; the build system (CMake, Conan) derives its version from
+/// these macros.
+/// @{
+#define FFB_VERSION_MAJOR 0
+#define FFB_VERSION_MINOR 1
+#define FFB_VERSION_PATCH 1
+#define FFB_VERSION_STRING "0.1.1"
+/// @}
+
 namespace ffb {
+
+/// Major version component, matching #FFB_VERSION_MAJOR.
+inline constexpr int kVersionMajor{FFB_VERSION_MAJOR};
+/// Minor version component, matching #FFB_VERSION_MINOR.
+inline constexpr int kVersionMinor{FFB_VERSION_MINOR};
+/// Patch version component, matching #FFB_VERSION_PATCH.
+inline constexpr int kVersionPatch{FFB_VERSION_PATCH};
+/// Full version string, e.g. "0.1.1", matching #FFB_VERSION_STRING.
+inline constexpr std::string_view kVersion{FFB_VERSION_STRING};
 
 /// Default buffer policy: all formatting features enabled.
 ///
