@@ -10,7 +10,7 @@ using ffb::Int64Policy;
 struct LongDoublePolicy {
     static constexpr bool kSupportFloatingPointDecimals = true;
     static constexpr std::size_t kDefaultFloatPrecision = 6U;
-    static constexpr std::size_t kMaxFloatPrecision     = 6U;
+    static constexpr std::size_t kMaxFloatPrecision = 6U;
     using IntType = int32_t;
     using UIntType = uint32_t;
     using FloatType = long double;
@@ -108,73 +108,73 @@ TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision0_OddInteger) {
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision1_EvenLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.1f", 2.25f);  // exactly 2.25 in binary (9/4)
+    buf.Format("%.1f", 2.25f);        // exactly 2.25 in binary (9/4)
     EXPECT_STREQ(buf.CStr(), "2.2");  // .25 → scaled frac=2 even, tie stays
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision1_OddLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.1f", 2.75f);  // exactly 2.75 in binary (11/4)
+    buf.Format("%.1f", 2.75f);        // exactly 2.75 in binary (11/4)
     EXPECT_STREQ(buf.CStr(), "2.8");  // .75 → scaled frac=7 odd, tie rounds up to 8
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision2_EvenLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.2f", 2.125f);  // exactly 2.125 in binary (17/8)
+    buf.Format("%.2f", 2.125f);        // exactly 2.125 in binary (17/8)
     EXPECT_STREQ(buf.CStr(), "2.12");  // .125 → scaled frac=12 even, tie stays
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision2_OddLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.2f", 2.375f);  // exactly 2.375 in binary (19/8)
+    buf.Format("%.2f", 2.375f);        // exactly 2.375 in binary (19/8)
     EXPECT_STREQ(buf.CStr(), "2.38");  // .375 → scaled frac=37 odd, tie rounds up to 38
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision3_EvenLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.3f", 2.0625f);  // exactly 2.0625 in binary (33/16)
+    buf.Format("%.3f", 2.0625f);        // exactly 2.0625 in binary (33/16)
     EXPECT_STREQ(buf.CStr(), "2.062");  // scaled frac=62 even, tie stays
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision3_OddLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.3f", 2.1875f);  // exactly 2.1875 in binary (35/16)
+    buf.Format("%.3f", 2.1875f);        // exactly 2.1875 in binary (35/16)
     EXPECT_STREQ(buf.CStr(), "2.188");  // scaled frac=187 odd, tie rounds up to 188
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision4_EvenLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.4f", 2.03125f);  // exactly 2.03125 in binary (65/32)
+    buf.Format("%.4f", 2.03125f);        // exactly 2.03125 in binary (65/32)
     EXPECT_STREQ(buf.CStr(), "2.0312");  // scaled frac=312 even, tie stays
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision4_OddLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.4f", 2.09375f);  // exactly 2.09375 in binary (67/32)
+    buf.Format("%.4f", 2.09375f);        // exactly 2.09375 in binary (67/32)
     EXPECT_STREQ(buf.CStr(), "2.0938");  // scaled frac=937 odd, tie rounds up to 938
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision5_EvenLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.5f", 2.015625f);  // exactly 2.015625 in binary (129/64)
+    buf.Format("%.5f", 2.015625f);        // exactly 2.015625 in binary (129/64)
     EXPECT_STREQ(buf.CStr(), "2.01562");  // scaled frac=1562 even, tie stays
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision5_OddLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.5f", 2.046875f);  // exactly 2.046875 in binary (131/64)
+    buf.Format("%.5f", 2.046875f);        // exactly 2.046875 in binary (131/64)
     EXPECT_STREQ(buf.CStr(), "2.04688");  // scaled frac=4687 odd, tie rounds up to 4688
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision6_EvenLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.6f", 2.0078125f);  // exactly 2.0078125 in binary (257/128)
+    buf.Format("%.6f", 2.0078125f);        // exactly 2.0078125 in binary (257/128)
     EXPECT_STREQ(buf.CStr(), "2.007812");  // scaled frac=7812 even, tie stays
 }
 
 TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision6_OddLastDigit) {
     FixedFormatBuffer<64> buf;
-    buf.Format("%.6f", 2.0234375f);  // exactly 2.0234375 in binary (259/128)
+    buf.Format("%.6f", 2.0234375f);        // exactly 2.0234375 in binary (259/128)
     EXPECT_STREQ(buf.CStr(), "2.023438");  // scaled frac=23437 odd, tie rounds up to 23438
 }
 
@@ -466,7 +466,7 @@ TEST(FixedFormatBuffer, Width_Int_ExactFit) {
 TEST(FixedFormatBuffer, Width_Int_NarrowerThanContent) {
     FixedFormatBuffer<64> buf;
     buf.Format("%2d", 12345);
-    EXPECT_STREQ(buf.CStr(), "12345"); // no truncation from width
+    EXPECT_STREQ(buf.CStr(), "12345");  // no truncation from width
 }
 
 TEST(FixedFormatBuffer, Width_Int_Negative) {
@@ -490,7 +490,7 @@ TEST(FixedFormatBuffer, Width_Float_ExactFit) {
 TEST(FixedFormatBuffer, Width_Float_NarrowerThanContent) {
     FixedFormatBuffer<64> buf;
     buf.Format("%3.2f", 3.14f);
-    EXPECT_STREQ(buf.CStr(), "3.14"); // no truncation from width
+    EXPECT_STREQ(buf.CStr(), "3.14");  // no truncation from width
 }
 
 TEST(FixedFormatBuffer, Width_Float_Negative) {

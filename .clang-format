@@ -1,0 +1,36 @@
+Language: Cpp
+BasedOnStyle: Google
+
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+
+ColumnLimit: 100
+
+BreakBeforeBraces: Attach
+PointerAlignment: Left
+ReferenceAlignment: Left
+
+SpacesInParentheses: false
+SpacesInAngles: false
+SpaceBeforeParens: ControlStatements
+
+AccessModifierOffset: -4
+
+AlignAfterOpenBracket: Align
+AlignConsecutiveAssignments: false
+AlignConsecutiveDeclarations: false
+
+AllowShortFunctionsOnASingleLine: Inline
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+BinPackArguments: false
+BinPackParameters: false
+
+Cpp11BracedListStyle: true
+
+DerivePointerAlignment: false
+
+IncludeBlocks: Preserve
+SortIncludes: false

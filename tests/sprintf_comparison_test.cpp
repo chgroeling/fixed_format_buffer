@@ -13,7 +13,7 @@ using ffb::Int64Policy;
 struct LongDoublePolicy {
     static constexpr bool kSupportFloatingPointDecimals = true;
     static constexpr std::size_t kDefaultFloatPrecision = 6U;
-    static constexpr std::size_t kMaxFloatPrecision     = 6U;
+    static constexpr std::size_t kMaxFloatPrecision = 6U;
     using IntType = int32_t;
     using UIntType = uint32_t;
     using FloatType = long double;

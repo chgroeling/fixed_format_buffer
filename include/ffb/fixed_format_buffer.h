@@ -43,24 +43,26 @@ inline constexpr std::string_view kVersion{FFB_VERSION_STRING};
 ///                 Must be a type that survives default argument promotion
 ///                 (i.e. not narrower than @c int). Default: @c int32_t.
 /// - `UIntType`  — the type read from the va_list for @c %x / @c %u.
-///                 Must be an unsigned type surviving default argument promotion.
-///                 Default: @c uint32_t.
+///                 Must be an unsigned type surviving default argument
+///                 promotion. Default: @c uint32_t.
 /// - `FloatType` — the internal floating-point type used by the formatter
 ///                 for @c %f processing. Default: @c float.
 ///
 /// @par Feature flags
-/// - `kSupportFloatingPointDecimals` — enables @c %f formatting. When @c false the specifier
+/// - `kSupportFloatingPointDecimals` — enables @c %f formatting. When @c false
+/// the specifier
 ///                     is silently consumed but produces no output.
-/// - `kDefaultFloatPrecision` — decimal digits after the point for bare @c %f. Default: 6.
+/// - `kDefaultFloatPrecision` — decimal digits after the point for bare @c %f.
+/// Default: 6.
 ///
 /// @par Extending the policy
 /// Derive or define a new struct overriding only what you need:
 /// @code
 ///   struct Int64Policy {
 ///       static constexpr bool kSupportFloatingPointDecimals = true;
-///       using IntType   = long long;          // accept 64-bit integers via %i/%d
-///       using UIntType  = unsigned long long; // accept 64-bit unsigned via %x/%u
-///       using FloatType = float;
+///       using IntType   = long long;          // accept 64-bit integers via
+///       %i/%d using UIntType  = unsigned long long; // accept 64-bit unsigned
+///       via %x/%u using FloatType = float;
 ///   };
 /// @endcode
 struct AllFeatures {
@@ -137,7 +139,8 @@ struct Int64Policy {
 template <std::size_t N, typename Policy = AllFeatures>
 class FixedFormatBuffer {
 public:
-    /// Maximum number of characters the buffer can hold (excluding null terminator).
+    /// Maximum number of characters the buffer can hold (excluding null
+    /// terminator).
     static constexpr std::size_t CAPACITY = N;
 
     FixedFormatBuffer() noexcept { buffer_[0] = '\0'; }
@@ -150,7 +153,7 @@ public:
     FixedFormatBuffer& operator=(const FixedFormatBuffer& other) noexcept {
         if (this != &other) {
             buffer_ = other.buffer_;
-            size_   = other.size_;
+            size_ = other.size_;
         }
         return *this;
     }
@@ -166,7 +169,7 @@ public:
     FixedFormatBuffer& operator=(FixedFormatBuffer&& other) noexcept {
         if (this != &other) {
             buffer_ = std::move(other.buffer_);
-            size_   = other.size_;
+            size_ = other.size_;
             other.size_ = 0;
             other.buffer_[0] = '\0';
         }
@@ -195,8 +198,10 @@ public:
     ///   - @c %u  — unsigned decimal integer
     ///   - @c %x  — hexadecimal unsigned integer (lowercase)
     ///   - @c %X  — hexadecimal unsigned integer (uppercase)
-    ///   - @c %f  — decimal float; only when @c Policy::kSupportFloatingPointDecimals is true.
-    ///             Optional precision: @c %.Nf  (default: @c Policy::kDefaultFloatPrecision).
+    ///   - @c %f  — decimal float; only when @c
+    ///   Policy::kSupportFloatingPointDecimals is true.
+    ///             Optional precision: @c %.Nf  (default: @c
+    ///             Policy::kDefaultFloatPrecision).
     ///
     /// @note The @c - flag (left-align), @c + flag (always show sign),
     ///       @c   (space) flag (prefix non-negative numbers with a space),
@@ -212,15 +217,16 @@ public:
     ///       range (values wider than the policy type are truncated), but the
     ///       @c va_arg read itself is always safe regardless of policy width.
     ///
-    ///       Width produces space-padded output aligned according to the @c - flag,
-    ///       or zero-padded for numeric specifiers when @c 0 is active.
+    ///       Width produces space-padded output aligned according to the @c -
+    ///       flag, or zero-padded for numeric specifiers when @c 0 is active.
     ///       Width and precision support the @c * notation (value read from the
     ///       argument list).  A negative @c * width implies left-justification;
-    ///       a negative @c * precision is treated as if the precision were omitted.
+    ///       a negative @c * precision is treated as if the precision were
+    ///       omitted.
     ///
     /// Truncates silently if the result exceeds capacity.
     /// @return Number of characters written (excluding null terminator).
-    template<typename... Args>
+    template <typename... Args>
     std::size_t Format(const char* fmt, Args... args) noexcept {
         static_assert((kIsValidFormatArg<Args> && ...),
                       "Format argument type not supported. "
@@ -250,7 +256,8 @@ public:
     std::size_t Write(const char* s) noexcept {
         const char* p{s};
         std::size_t len{0U};
-        if (!p) return len;
+        if (!p)
+            return len;
         while (*p && len < N) {
             buffer_[len++] = *p++;
         }
@@ -281,7 +288,7 @@ public:
     /// Append format. Like Format() but appends to existing
     /// content instead of overwriting.
     /// @see Format()
-    template<typename... Args>
+    template <typename... Args>
     std::size_t Append(const char* fmt, Args... args) noexcept {
         static_assert((kIsValidFormatArg<Args> && ...),
                       "Format argument type not supported. "
@@ -289,28 +296,22 @@ public:
         return AppendVa(fmt, args...);
     }
 
-    friend bool operator==(const FixedFormatBuffer& a,
-                           const FixedFormatBuffer& b) noexcept {
+    friend bool operator==(const FixedFormatBuffer& a, const FixedFormatBuffer& b) noexcept {
         return std::string_view{a.CStr()} == std::string_view{b.CStr()};
     }
-    friend bool operator!=(const FixedFormatBuffer& a,
-                           const FixedFormatBuffer& b) noexcept {
+    friend bool operator!=(const FixedFormatBuffer& a, const FixedFormatBuffer& b) noexcept {
         return !(a == b);
     }
-    friend bool operator==(const FixedFormatBuffer& buf,
-                           std::string_view sv) noexcept {
+    friend bool operator==(const FixedFormatBuffer& buf, std::string_view sv) noexcept {
         return std::string_view{buf.CStr()} == sv;
     }
-    friend bool operator==(std::string_view sv,
-                           const FixedFormatBuffer& buf) noexcept {
+    friend bool operator==(std::string_view sv, const FixedFormatBuffer& buf) noexcept {
         return sv == std::string_view{buf.CStr()};
     }
-    friend bool operator!=(const FixedFormatBuffer& buf,
-                           std::string_view sv) noexcept {
+    friend bool operator!=(const FixedFormatBuffer& buf, std::string_view sv) noexcept {
         return std::string_view{buf.CStr()} != sv;
     }
-    friend bool operator!=(std::string_view sv,
-                           const FixedFormatBuffer& buf) noexcept {
+    friend bool operator!=(std::string_view sv, const FixedFormatBuffer& buf) noexcept {
         return sv != std::string_view{buf.CStr()};
     }
 
@@ -330,33 +331,25 @@ private:
 
     /// Maximum safe width for floating-point arguments.
     /// Rejects @c double when the policy uses @c float, etc.
-    static constexpr std::size_t kMaxSafeFloatSize =
-        sizeof(typename Policy::FloatType);
+    static constexpr std::size_t kMaxSafeFloatSize = sizeof(typename Policy::FloatType);
 
-    template<typename T>
+    template <typename T>
     static constexpr bool kIsValidFormatArg =
-        std::is_same_v<T, char>              ||
-        std::is_same_v<T, signed char>       ||
-        std::is_same_v<T, unsigned char>     ||
-        std::is_same_v<T, short>             ||
-        std::is_same_v<T, unsigned short>    ||
-        std::is_same_v<T, int>               ||
-        std::is_same_v<T, unsigned int>      ||
-        std::is_same_v<T, int16_t>           ||
-        std::is_same_v<T, uint16_t>          ||
-        std::is_same_v<T, int32_t>           ||
-        std::is_same_v<T, uint32_t>          ||
-        (std::is_same_v<T, long>               && sizeof(long)               <= kMaxSafeArgSize) ||
-        (std::is_same_v<T, unsigned long>      && sizeof(unsigned long)      <= kMaxSafeArgSize) ||
-        (std::is_same_v<T, long long>          && sizeof(long long)          <= kMaxSafeArgSize) ||
+        std::is_same_v<T, char> || std::is_same_v<T, signed char> ||
+        std::is_same_v<T, unsigned char> || std::is_same_v<T, short> ||
+        std::is_same_v<T, unsigned short> || std::is_same_v<T, int> ||
+        std::is_same_v<T, unsigned int> || std::is_same_v<T, int16_t> ||
+        std::is_same_v<T, uint16_t> || std::is_same_v<T, int32_t> || std::is_same_v<T, uint32_t> ||
+        (std::is_same_v<T, long> && sizeof(long) <= kMaxSafeArgSize) ||
+        (std::is_same_v<T, unsigned long> && sizeof(unsigned long) <= kMaxSafeArgSize) ||
+        (std::is_same_v<T, long long> && sizeof(long long) <= kMaxSafeArgSize) ||
         (std::is_same_v<T, unsigned long long> && sizeof(unsigned long long) <= kMaxSafeArgSize) ||
-        (std::is_same_v<T, int64_t>             && sizeof(int64_t)           <= kMaxSafeArgSize) ||
-        (std::is_same_v<T, uint64_t>            && sizeof(uint64_t)          <= kMaxSafeArgSize) ||
-        std::is_same_v<T, float>             ||
-        (std::is_same_v<T, double>      && sizeof(double)      <= kMaxSafeFloatSize) ||
+        (std::is_same_v<T, int64_t> && sizeof(int64_t) <= kMaxSafeArgSize) ||
+        (std::is_same_v<T, uint64_t> && sizeof(uint64_t) <= kMaxSafeArgSize) ||
+        std::is_same_v<T, float> ||
+        (std::is_same_v<T, double> && sizeof(double) <= kMaxSafeFloatSize) ||
         (std::is_same_v<T, long double> && sizeof(long double) <= kMaxSafeFloatSize) ||
-        std::is_same_v<T, const char*>       ||
-        std::is_same_v<T, char*>              ||
+        std::is_same_v<T, const char*> || std::is_same_v<T, char*> ||
         std::is_same_v<T, std::nullptr_t>;
 
     /// C-variadic bridge — called by the template Format().
@@ -380,19 +373,22 @@ private:
     // -------------------------------------------------------------------------
     // Policy-derived type aliases (used throughout the private implementation)
     // -------------------------------------------------------------------------
-    using IntType   = typename Policy::IntType;
-    using UIntType  = typename Policy::UIntType;
+    using IntType = typename Policy::IntType;
+    using UIntType = typename Policy::UIntType;
     using FloatType = typename Policy::FloatType;
 
     // -------------------------------------------------------------------------
     // Format flags (parsed from the specifier, e.g. "%-+10.2f")
     // -------------------------------------------------------------------------
     struct FormatFlags {
-        bool left_justify   : 1;  ///< @c - flag: pad on the right (left-justify content)
-        bool show_sign      : 1;  ///< @c + flag: always emit a sign for numeric values
-        bool space_flag     : 1;  ///< @c (space) flag: prepend space for non-negative numbers
-        bool zero_pad       : 1;  ///< @c 0 flag: zero-pad numeric values to width
-        bool alternate_form : 1;  ///< @c # flag: prepend 0x for @c \%x, force point for @c \%f
+        bool left_justify : 1;    ///< @c - flag: pad on the right (left-justify
+                                  ///< content)
+        bool show_sign : 1;       ///< @c + flag: always emit a sign for numeric values
+        bool space_flag : 1;      ///< @c (space) flag: prepend space for non-negative
+                                  ///< numbers
+        bool zero_pad : 1;        ///< @c 0 flag: zero-pad numeric values to width
+        bool alternate_form : 1;  ///< @c # flag: prepend 0x for @c \%x, force point
+                                  ///< for @c \%f
     };
 
     /// Parsed length modifier (e.g. @c hh, @c l, @c ll, @c j, @c z, @c t, @c L).
@@ -415,12 +411,13 @@ private:
     // giving snprintf-style "would have written" semantics for free.
     // -------------------------------------------------------------------------
     struct Gadget {
-        char*       buf;
+        char* buf;
         std::size_t pos;
         std::size_t max_chars;
 
         void Put(char c) noexcept {
-            if (pos < max_chars) buf[pos] = c;
+            if (pos < max_chars)
+                buf[pos] = c;
             ++pos;
         }
     };
@@ -431,9 +428,14 @@ private:
 
     /// Emit `width - content_len` space characters (right-align padding).
     /// No-op when content already meets or exceeds the width.
-    static void EmitPadding(Gadget& g, std::size_t width, std::size_t content_len,
+    static void EmitPadding(Gadget& g,
+                            std::size_t width,
+                            std::size_t content_len,
                             char pad = ' ') noexcept {
-        while (content_len < width) { g.Put(pad); ++content_len; }
+        while (content_len < width) {
+            g.Put(pad);
+            ++content_len;
+        }
     }
 
     /// A gadget that counts characters without writing them.
@@ -444,24 +446,33 @@ private:
     }
 
     static void WriteRaw(Gadget& g, const char* s, std::size_t len) noexcept {
-        for (std::size_t i = 0U; i < len; ++i) g.Put(s[i]);
+        for (std::size_t i = 0U; i < len; ++i)
+            g.Put(s[i]);
     }
 
     static void WriteString(Gadget& g, const char* s) noexcept {
-        if (!s) { WriteRaw(g, "(null)", 6U); return; }
-        while (*s) g.Put(*s++);
+        if (!s) {
+            WriteRaw(g, "(null)", 6U);
+            return;
+        }
+        while (*s)
+            g.Put(*s++);
     }
 
     /// Write an unsigned 64-bit integer in decimal.
     static void WriteUnsigned(Gadget& g, uint64_t value) noexcept {
-        char tmp[20]{}; // 2^64 needs at most 20 decimal digits
+        char tmp[20]{};  // 2^64 needs at most 20 decimal digits
         std::size_t len{0U};
-        if (value == 0ULL) { g.Put('0'); return; }
+        if (value == 0ULL) {
+            g.Put('0');
+            return;
+        }
         while (value) {
             tmp[len++] = static_cast<char>('0' + value % 10U);
             value /= 10U;
         }
-        while (len) g.Put(tmp[--len]); // reverse
+        while (len)
+            g.Put(tmp[--len]);  // reverse
     }
 
     static uint64_t AbsAsU64(IntType value) noexcept {
@@ -476,23 +487,31 @@ private:
         const char* const kDigits{uppercase ? kDigitsUpper : kDigitsLower};
         char tmp[sizeof(UIntType) * 2]{};
         std::size_t len{0U};
-        if (value == UIntType(0)) { g.Put('0'); return; }
+        if (value == UIntType(0)) {
+            g.Put('0');
+            return;
+        }
         while (value) {
             tmp[len++] = kDigits[value & UIntType(0x0F)];
             value >>= UIntType(4);
         }
-        while (len) g.Put(tmp[--len]);
+        while (len)
+            g.Put(tmp[--len]);
     }
 
-    static void WriteInt(Gadget& g, IntType value, bool show_sign = false,
+    static void WriteInt(Gadget& g,
+                         IntType value,
+                         bool show_sign = false,
                          bool space_flag = false) noexcept {
         if (value < IntType(0)) {
             g.Put('-');
             // Negate via uint64_t arithmetic to avoid UB on IntType's minimum value.
             WriteUnsigned(g, static_cast<uint64_t>(-(static_cast<int64_t>(value) + 1)) + 1ULL);
         } else {
-            if (show_sign) g.Put('+');
-            else if (space_flag) g.Put(' ');
+            if (show_sign)
+                g.Put('+');
+            else if (space_flag)
+                g.Put(' ');
             WriteUnsigned(g, static_cast<uint64_t>(value));
         }
     }
@@ -500,7 +519,9 @@ private:
     /// Compute FloatType(10^n) at compile time (n <= kMaxFloatPrecision).
     static constexpr FloatType Pow10(std::size_t n) noexcept {
         FloatType result{FloatType(1)};
-        for (std::size_t i{0U}; i < n; ++i) { result = result * FloatType(10); }
+        for (std::size_t i{0U}; i < n; ++i) {
+            result = result * FloatType(10);
+        }
         return result;
     }
 
@@ -508,7 +529,7 @@ private:
     struct FloatComponents {
         int64_t integral;
         int64_t fractional;
-        bool    is_negative;
+        bool is_negative;
     };
 
     /// Decompose a finite float into integral and fractional decimal components.
@@ -524,8 +545,8 @@ private:
         FloatType abs_val{c.is_negative ? -value : value};
 
         c.integral = static_cast<int64_t>(abs_val);
-        FloatType scaled_remainder{(abs_val - static_cast<FloatType>(c.integral))
-                                   * Pow10(precision)};
+        FloatType scaled_remainder{(abs_val - static_cast<FloatType>(c.integral)) *
+                                   Pow10(precision)};
         c.fractional = static_cast<int64_t>(scaled_remainder);
 
         FloatType remainder{scaled_remainder - static_cast<FloatType>(c.fractional)};
@@ -533,8 +554,7 @@ private:
 
         // Banker's rounding: round up if remainder > 0.5, or if == 0.5 and
         // the fractional part is odd (round-half-to-even).
-        if (remainder > kHalf ||
-            (remainder == kHalf && (c.fractional & 1))) {
+        if (remainder > kHalf || (remainder == kHalf && (c.fractional & 1))) {
             ++c.fractional;
         }
 
@@ -548,7 +568,8 @@ private:
         // banker's rounding above never fires for the half-way case.
         // Re-apply it directly on the integral part.
         if (precision == 0U) {
-            remainder = abs_val - static_cast<FloatType>(c.integral);            if (remainder == kHalf && (c.integral & 1)) {
+            remainder = abs_val - static_cast<FloatType>(c.integral);
+            if (remainder == kHalf && (c.integral & 1)) {
                 ++c.integral;
             }
         }
@@ -560,36 +581,55 @@ private:
     // cast<FloatType>(INT64_MAX) rounds up to 2^63; anything >= that overflows.
     static constexpr FloatType kMaxSafeIntegral = static_cast<FloatType>(INT64_MAX);
 
-    static void WriteFloat(Gadget& g, FloatType value, std::size_t precision,
-                           bool show_sign = false, bool emit_sign = true,
+    static void WriteFloat(Gadget& g,
+                           FloatType value,
+                           std::size_t precision,
+                           bool show_sign = false,
+                           bool emit_sign = true,
                            bool alternate_form = false,
                            bool space_flag = false) noexcept {
         constexpr FloatType kFloatMax{std::numeric_limits<FloatType>::max()};
-        if (value != value)    { WriteRaw(g, "nan",  3U); return; } // NaN — no sign
-        if (value >  kFloatMax) {
-            if (emit_sign && show_sign) g.Put('+');
-            else if (emit_sign && space_flag) g.Put(' ');
-            WriteRaw(g, "inf",  3U); return;
+        if (value != value) {
+            WriteRaw(g, "nan", 3U);
+            return;
+        }  // NaN — no sign
+        if (value > kFloatMax) {
+            if (emit_sign && show_sign)
+                g.Put('+');
+            else if (emit_sign && space_flag)
+                g.Put(' ');
+            WriteRaw(g, "inf", 3U);
+            return;
         }
-        if (value < -kFloatMax){ WriteRaw(g, "-inf", 4U); return; } // -inf
+        if (value < -kFloatMax) {
+            WriteRaw(g, "-inf", 4U);
+            return;
+        }  // -inf
 
         // Guard: abs value >= 2^63 would overflow int64_t in GetComponents.
         const FloatType abs_val{value < FloatType(0) ? -value : value};
         if (abs_val >= kMaxSafeIntegral) {
-            if (emit_sign && value < FloatType(0)) g.Put('-');
-            else if (emit_sign && show_sign)       g.Put('+');
-            else if (emit_sign && space_flag)      g.Put(' ');
+            if (emit_sign && value < FloatType(0))
+                g.Put('-');
+            else if (emit_sign && show_sign)
+                g.Put('+');
+            else if (emit_sign && space_flag)
+                g.Put(' ');
             WriteRaw(g, "ovf", 3U);
             return;
         }
 
-        if (precision > Policy::kMaxFloatPrecision) precision = Policy::kMaxFloatPrecision;
+        if (precision > Policy::kMaxFloatPrecision)
+            precision = Policy::kMaxFloatPrecision;
 
         const FloatComponents c = GetComponents(value, precision);
 
-        if (emit_sign && c.is_negative) g.Put('-');
-        else if (emit_sign && show_sign) g.Put('+');
-        else if (emit_sign && space_flag && !c.is_negative) g.Put(' ');
+        if (emit_sign && c.is_negative)
+            g.Put('-');
+        else if (emit_sign && show_sign)
+            g.Put('+');
+        else if (emit_sign && space_flag && !c.is_negative)
+            g.Put(' ');
         WriteUnsigned(g, static_cast<uint64_t>(c.integral));
 
         if (precision > 0U || alternate_form) {
@@ -602,7 +642,8 @@ private:
                 frac[i - 1U] = static_cast<char>('0' + tmp % 10U);
                 tmp /= 10U;
             }
-            for (std::size_t i = 0U; i < precision; ++i) g.Put(frac[i]);
+            for (std::size_t i = 0U; i < precision; ++i)
+                g.Put(frac[i]);
         }
     }
 
@@ -612,13 +653,20 @@ private:
 
     static IntType ReadSignedArg(va_list& args, LengthMod len) noexcept {
         switch (len) {
-            case LengthMod::hh: return static_cast<IntType>(static_cast<signed char>(va_arg(args, int)));
-            case LengthMod::h:  return static_cast<IntType>(static_cast<short>(va_arg(args, int)));
-            case LengthMod::l:  return static_cast<IntType>(va_arg(args, long));
-            case LengthMod::ll: return static_cast<IntType>(va_arg(args, long long));
-            case LengthMod::j:  return static_cast<IntType>(va_arg(args, intmax_t));
-            case LengthMod::z:  return static_cast<IntType>(va_arg(args, size_t));
-            case LengthMod::t:  return static_cast<IntType>(va_arg(args, ptrdiff_t));
+            case LengthMod::hh:
+                return static_cast<IntType>(static_cast<signed char>(va_arg(args, int)));
+            case LengthMod::h:
+                return static_cast<IntType>(static_cast<short>(va_arg(args, int)));
+            case LengthMod::l:
+                return static_cast<IntType>(va_arg(args, long));
+            case LengthMod::ll:
+                return static_cast<IntType>(va_arg(args, long long));
+            case LengthMod::j:
+                return static_cast<IntType>(va_arg(args, intmax_t));
+            case LengthMod::z:
+                return static_cast<IntType>(va_arg(args, size_t));
+            case LengthMod::t:
+                return static_cast<IntType>(va_arg(args, ptrdiff_t));
             default: {
                 // Without a length modifier the variadic argument undergoes
                 // default argument promotion to int.  We must read int to
@@ -636,13 +684,20 @@ private:
 
     static UIntType ReadUnsignedArg(va_list& args, LengthMod len) noexcept {
         switch (len) {
-            case LengthMod::hh: return static_cast<UIntType>(static_cast<unsigned char>(va_arg(args, int)));
-            case LengthMod::h:  return static_cast<UIntType>(static_cast<unsigned short>(va_arg(args, int)));
-            case LengthMod::l:  return static_cast<UIntType>(va_arg(args, unsigned long));
-            case LengthMod::ll: return static_cast<UIntType>(va_arg(args, unsigned long long));
-            case LengthMod::j:  return static_cast<UIntType>(va_arg(args, uintmax_t));
-            case LengthMod::z:  return static_cast<UIntType>(va_arg(args, size_t));
-            case LengthMod::t:  return static_cast<UIntType>(va_arg(args, ptrdiff_t));
+            case LengthMod::hh:
+                return static_cast<UIntType>(static_cast<unsigned char>(va_arg(args, int)));
+            case LengthMod::h:
+                return static_cast<UIntType>(static_cast<unsigned short>(va_arg(args, int)));
+            case LengthMod::l:
+                return static_cast<UIntType>(va_arg(args, unsigned long));
+            case LengthMod::ll:
+                return static_cast<UIntType>(va_arg(args, unsigned long long));
+            case LengthMod::j:
+                return static_cast<UIntType>(va_arg(args, uintmax_t));
+            case LengthMod::z:
+                return static_cast<UIntType>(va_arg(args, size_t));
+            case LengthMod::t:
+                return static_cast<UIntType>(va_arg(args, ptrdiff_t));
             default: {
                 // Without a length modifier the promoted type is unsigned int.
                 // Reading the policy's UIntType directly would cause a va_arg
@@ -667,21 +722,30 @@ private:
         Gadget g{buffer_.data(), start_pos, N};
 
         while (*fmt) {
-            if (*fmt != '%') { g.Put(*fmt++); continue; }
+            if (*fmt != '%') {
+                g.Put(*fmt++);
+                continue;
+            }
 
-            ++fmt; // consume '%'
-            if (!*fmt) break;
+            ++fmt;  // consume '%'
+            if (!*fmt)
+                break;
 
             // --- Flags ---
-            // '-' (left-justify) and '+' (show_sign) are acted upon; others are recognised but ignored.
+            // '-' (left-justify) and '+' (show_sign) are acted upon; others are
+            // recognised but ignored.
             FormatFlags flags{};
-            while (*fmt == '-' || *fmt == '+' || *fmt == ' ' ||
-                   *fmt == '0' || *fmt == '#') {
-                if (*fmt == '-') flags.left_justify   = true;
-                if (*fmt == '+') flags.show_sign      = true;
-                if (*fmt == ' ') flags.space_flag      = true;
-                if (*fmt == '0') flags.zero_pad        = true;
-                if (*fmt == '#') flags.alternate_form  = true;
+            while (*fmt == '-' || *fmt == '+' || *fmt == ' ' || *fmt == '0' || *fmt == '#') {
+                if (*fmt == '-')
+                    flags.left_justify = true;
+                if (*fmt == '+')
+                    flags.show_sign = true;
+                if (*fmt == ' ')
+                    flags.space_flag = true;
+                if (*fmt == '0')
+                    flags.zero_pad = true;
+                if (*fmt == '#')
+                    flags.alternate_form = true;
                 ++fmt;
             }
 
@@ -692,8 +756,11 @@ private:
             if (*fmt == '*') {
                 ++fmt;
                 const int w{va_arg(args, int)};
-                if (w < 0) { flags.left_justify = true; width = static_cast<std::size_t>(-w); }
-                else width = static_cast<std::size_t>(w);
+                if (w < 0) {
+                    flags.left_justify = true;
+                    width = static_cast<std::size_t>(-w);
+                } else
+                    width = static_cast<std::size_t>(w);
             } else if (*fmt >= '1' && *fmt <= '9') {
                 width = static_cast<std::size_t>(*fmt++ - '0');
                 while (*fmt >= '0' && *fmt <= '9')
@@ -708,17 +775,20 @@ private:
                 if (*fmt == '*') {
                     ++fmt;
                     const int p{va_arg(args, int)};
-                    if (p < 0) precision = Policy::kDefaultFloatPrecision;
+                    if (p < 0)
+                        precision = Policy::kDefaultFloatPrecision;
                     else if (static_cast<std::size_t>(p) > Policy::kMaxFloatPrecision)
                         precision = Policy::kMaxFloatPrecision;
-                    else precision = static_cast<std::size_t>(p);
+                    else
+                        precision = static_cast<std::size_t>(p);
                 } else {
                     precision = 0U;
                     while (*fmt >= '0' && *fmt <= '9') {
                         precision = precision * 10U + static_cast<std::size_t>(*fmt++ - '0');
                         if (precision > Policy::kMaxFloatPrecision) {
                             precision = Policy::kMaxFloatPrecision;
-                            while (*fmt >= '0' && *fmt <= '9') ++fmt; // drain remaining digits
+                            while (*fmt >= '0' && *fmt <= '9')
+                                ++fmt;  // drain remaining digits
                             break;
                         }
                     }
@@ -729,25 +799,42 @@ private:
             LengthMod len_mod{LengthMod::None};
             if (*fmt == 'h') {
                 ++fmt;
-                if (*fmt == 'h') { ++fmt; len_mod = LengthMod::hh; }
-                else len_mod = LengthMod::h;
+                if (*fmt == 'h') {
+                    ++fmt;
+                    len_mod = LengthMod::hh;
+                } else
+                    len_mod = LengthMod::h;
             } else if (*fmt == 'l') {
                 ++fmt;
-                if (*fmt == 'l') { ++fmt; len_mod = LengthMod::ll; }
-                else len_mod = LengthMod::l;
-            } else if (*fmt == 'j') { ++fmt; len_mod = LengthMod::j; }
-            else if (*fmt == 'z') { ++fmt; len_mod = LengthMod::z; }
-            else if (*fmt == 't') { ++fmt; len_mod = LengthMod::t; }
-            else if (*fmt == 'L') { ++fmt; len_mod = LengthMod::L; }
+                if (*fmt == 'l') {
+                    ++fmt;
+                    len_mod = LengthMod::ll;
+                } else
+                    len_mod = LengthMod::l;
+            } else if (*fmt == 'j') {
+                ++fmt;
+                len_mod = LengthMod::j;
+            } else if (*fmt == 'z') {
+                ++fmt;
+                len_mod = LengthMod::z;
+            } else if (*fmt == 't') {
+                ++fmt;
+                len_mod = LengthMod::t;
+            } else if (*fmt == 'L') {
+                ++fmt;
+                len_mod = LengthMod::L;
+            }
 
             switch (*fmt) {
                 case 'c': {
                     // char promotes to int in variadic calls.
                     const char c{static_cast<char>(va_arg(args, int))};
                     if (width > 0U) {
-                        if (!flags.left_justify) EmitPadding(g, width, 1U);
+                        if (!flags.left_justify)
+                            EmitPadding(g, width, 1U);
                         g.Put(c);
-                        if ( flags.left_justify) EmitPadding(g, width, 1U);
+                        if (flags.left_justify)
+                            EmitPadding(g, width, 1U);
                     } else {
                         g.Put(c);
                     }
@@ -758,9 +845,11 @@ private:
                     if (width > 0U) {
                         Gadget dry{MakeCountingGadget()};
                         WriteString(dry, s);
-                        if (!flags.left_justify) EmitPadding(g, width, dry.pos);
+                        if (!flags.left_justify)
+                            EmitPadding(g, width, dry.pos);
                         WriteString(g, s);
-                        if ( flags.left_justify) EmitPadding(g, width, dry.pos);
+                        if (flags.left_justify)
+                            EmitPadding(g, width, dry.pos);
                     } else {
                         WriteString(g, s);
                     }
@@ -772,17 +861,22 @@ private:
                     if (width > 0U && flags.zero_pad && !flags.left_justify) {
                         Gadget dry{MakeCountingGadget()};
                         WriteInt(dry, v, flags.show_sign, flags.space_flag);
-                        if (v < IntType(0)) g.Put('-');
-                        else if (flags.show_sign) g.Put('+');
-                        else if (flags.space_flag) g.Put(' ');
+                        if (v < IntType(0))
+                            g.Put('-');
+                        else if (flags.show_sign)
+                            g.Put('+');
+                        else if (flags.space_flag)
+                            g.Put(' ');
                         EmitPadding(g, width, dry.pos, '0');
                         WriteUnsigned(g, AbsAsU64(v));
                     } else if (width > 0U) {
                         Gadget dry{MakeCountingGadget()};
                         WriteInt(dry, v, flags.show_sign, flags.space_flag);
-                        if (!flags.left_justify) EmitPadding(g, width, dry.pos);
+                        if (!flags.left_justify)
+                            EmitPadding(g, width, dry.pos);
                         WriteInt(g, v, flags.show_sign, flags.space_flag);
-                        if ( flags.left_justify) EmitPadding(g, width, dry.pos);
+                        if (flags.left_justify)
+                            EmitPadding(g, width, dry.pos);
                     } else {
                         WriteInt(g, v, flags.show_sign, flags.space_flag);
                     }
@@ -797,36 +891,73 @@ private:
                     if constexpr (Policy::kSupportFloatingPointDecimals) {
                         if (width > 0U && flags.zero_pad && !flags.left_justify) {
                             const bool is_normal{v == v &&
-                                v >= -std::numeric_limits<FloatType>::max() &&
-                                v <=  std::numeric_limits<FloatType>::max() &&
-                                v > -kMaxSafeIntegral && v < kMaxSafeIntegral};
+                                                 v >= -std::numeric_limits<FloatType>::max() &&
+                                                 v <= std::numeric_limits<FloatType>::max() &&
+                                                 v > -kMaxSafeIntegral && v < kMaxSafeIntegral};
                             Gadget dry{MakeCountingGadget()};
-                            WriteFloat(dry, v, precision, flags.show_sign, true,
-                                       flags.alternate_form, flags.space_flag);
+                            WriteFloat(dry,
+                                       v,
+                                       precision,
+                                       flags.show_sign,
+                                       true,
+                                       flags.alternate_form,
+                                       flags.space_flag);
                             if (is_normal) {
-                                if (v < FloatType(0)) g.Put('-');
-                                else if (flags.show_sign) g.Put('+');
-                                else if (flags.space_flag) g.Put(' ');
+                                if (v < FloatType(0))
+                                    g.Put('-');
+                                else if (flags.show_sign)
+                                    g.Put('+');
+                                else if (flags.space_flag)
+                                    g.Put(' ');
                                 EmitPadding(g, width, dry.pos, '0');
-                                WriteFloat(g, v, precision, flags.show_sign, false,
-                                           flags.alternate_form, flags.space_flag);
+                                WriteFloat(g,
+                                           v,
+                                           precision,
+                                           flags.show_sign,
+                                           false,
+                                           flags.alternate_form,
+                                           flags.space_flag);
                             } else {
-                                if (!flags.left_justify) EmitPadding(g, width, dry.pos);
-                                WriteFloat(g, v, precision, flags.show_sign, true,
-                                           flags.alternate_form, flags.space_flag);
-                                if ( flags.left_justify) EmitPadding(g, width, dry.pos);
+                                if (!flags.left_justify)
+                                    EmitPadding(g, width, dry.pos);
+                                WriteFloat(g,
+                                           v,
+                                           precision,
+                                           flags.show_sign,
+                                           true,
+                                           flags.alternate_form,
+                                           flags.space_flag);
+                                if (flags.left_justify)
+                                    EmitPadding(g, width, dry.pos);
                             }
                         } else if (width > 0U) {
                             Gadget dry{MakeCountingGadget()};
-                            WriteFloat(dry, v, precision, flags.show_sign, true,
-                                       flags.alternate_form, flags.space_flag);
-                            if (!flags.left_justify) EmitPadding(g, width, dry.pos);
-                            WriteFloat(g, v, precision, flags.show_sign, true,
-                                       flags.alternate_form, flags.space_flag);
-                            if ( flags.left_justify) EmitPadding(g, width, dry.pos);
+                            WriteFloat(dry,
+                                       v,
+                                       precision,
+                                       flags.show_sign,
+                                       true,
+                                       flags.alternate_form,
+                                       flags.space_flag);
+                            if (!flags.left_justify)
+                                EmitPadding(g, width, dry.pos);
+                            WriteFloat(g,
+                                       v,
+                                       precision,
+                                       flags.show_sign,
+                                       true,
+                                       flags.alternate_form,
+                                       flags.space_flag);
+                            if (flags.left_justify)
+                                EmitPadding(g, width, dry.pos);
                         } else {
-                            WriteFloat(g, v, precision, flags.show_sign, true,
-                                       flags.alternate_form, flags.space_flag);
+                            WriteFloat(g,
+                                       v,
+                                       precision,
+                                       flags.show_sign,
+                                       true,
+                                       flags.alternate_form,
+                                       flags.space_flag);
                         }
                     }
                     break;
@@ -841,9 +972,11 @@ private:
                     } else if (width > 0U) {
                         Gadget dry{MakeCountingGadget()};
                         WriteUnsigned(dry, v);
-                        if (!flags.left_justify) EmitPadding(g, width, dry.pos);
+                        if (!flags.left_justify)
+                            EmitPadding(g, width, dry.pos);
                         WriteUnsigned(g, v);
-                        if ( flags.left_justify) EmitPadding(g, width, dry.pos);
+                        if (flags.left_justify)
+                            EmitPadding(g, width, dry.pos);
                     } else {
                         WriteUnsigned(g, v);
                     }
@@ -856,19 +989,33 @@ private:
                         Gadget dry{MakeCountingGadget()};
                         WriteHex(dry, v);
                         const std::size_t content_len{dry.pos + (use_prefix ? 2U : 0U)};
-                        if (use_prefix) { g.Put('0'); g.Put('x'); }
+                        if (use_prefix) {
+                            g.Put('0');
+                            g.Put('x');
+                        }
                         EmitPadding(g, width, content_len, '0');
                         WriteHex(g, v);
                     } else if (width > 0U) {
                         Gadget dry{MakeCountingGadget()};
-                        if (use_prefix) { dry.Put('0'); dry.Put('x'); }
+                        if (use_prefix) {
+                            dry.Put('0');
+                            dry.Put('x');
+                        }
                         WriteHex(dry, v);
-                        if (!flags.left_justify) EmitPadding(g, width, dry.pos);
-                        if (use_prefix) { g.Put('0'); g.Put('x'); }
+                        if (!flags.left_justify)
+                            EmitPadding(g, width, dry.pos);
+                        if (use_prefix) {
+                            g.Put('0');
+                            g.Put('x');
+                        }
                         WriteHex(g, v);
-                        if ( flags.left_justify) EmitPadding(g, width, dry.pos);
+                        if (flags.left_justify)
+                            EmitPadding(g, width, dry.pos);
                     } else {
-                        if (use_prefix) { g.Put('0'); g.Put('x'); }
+                        if (use_prefix) {
+                            g.Put('0');
+                            g.Put('x');
+                        }
                         WriteHex(g, v);
                     }
                     break;
@@ -880,19 +1027,33 @@ private:
                         Gadget dry{MakeCountingGadget()};
                         WriteHex(dry, v, true);
                         const std::size_t content_len{dry.pos + (use_prefix ? 2U : 0U)};
-                        if (use_prefix) { g.Put('0'); g.Put('X'); }
+                        if (use_prefix) {
+                            g.Put('0');
+                            g.Put('X');
+                        }
                         EmitPadding(g, width, content_len, '0');
                         WriteHex(g, v, true);
                     } else if (width > 0U) {
                         Gadget dry{MakeCountingGadget()};
-                        if (use_prefix) { dry.Put('0'); dry.Put('X'); }
+                        if (use_prefix) {
+                            dry.Put('0');
+                            dry.Put('X');
+                        }
                         WriteHex(dry, v, true);
-                        if (!flags.left_justify) EmitPadding(g, width, dry.pos);
-                        if (use_prefix) { g.Put('0'); g.Put('X'); }
+                        if (!flags.left_justify)
+                            EmitPadding(g, width, dry.pos);
+                        if (use_prefix) {
+                            g.Put('0');
+                            g.Put('X');
+                        }
                         WriteHex(g, v, true);
-                        if ( flags.left_justify) EmitPadding(g, width, dry.pos);
+                        if (flags.left_justify)
+                            EmitPadding(g, width, dry.pos);
                     } else {
-                        if (use_prefix) { g.Put('0'); g.Put('X'); }
+                        if (use_prefix) {
+                            g.Put('0');
+                            g.Put('X');
+                        }
                         WriteHex(g, v, true);
                     }
                     break;
@@ -915,8 +1076,7 @@ private:
     }
 
     std::array<char, N + 1> buffer_{};
-    std::size_t              size_{0};
+    std::size_t size_{0};
 };
 
 }  // namespace ffb
-

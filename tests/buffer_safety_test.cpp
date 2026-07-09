@@ -26,20 +26,20 @@ template <std::size_t N>
 struct Guarded {
     static constexpr uint8_t kFill = 0xCC;
 
-    uint8_t              before[16];
+    uint8_t before[16];
     FixedFormatBuffer<N> buf;
-    uint8_t              after[16];
+    uint8_t after[16];
 
     Guarded() {
         std::memset(before, kFill, sizeof(before));
-        std::memset(after,  kFill, sizeof(after));
+        std::memset(after, kFill, sizeof(after));
     }
 
     void CheckSentinels() const {
         for (std::size_t i = 0U; i < sizeof(before); ++i)
             EXPECT_EQ(before[i], kFill) << "before-sentinel corrupted at index " << i;
         for (std::size_t i = 0U; i < sizeof(after); ++i)
-            EXPECT_EQ(after[i],  kFill) << "after-sentinel corrupted at index " << i;
+            EXPECT_EQ(after[i], kFill) << "after-sentinel corrupted at index " << i;
     }
 };
 
@@ -149,8 +149,8 @@ TEST(BufferSafety, Sentinel_MultipleFormats) {
 // Long → short: null terminator must move to the new (shorter) position.
 TEST(BufferSafety, Reuse_LongToShort_NullTerminatorCorrect) {
     FixedFormatBuffer<16> buf;
-    buf.Format("%s", "hello");            // size=5, buffer[5]='\0'
-    buf.Format("%s", "hi");               // size=2, buffer[2] must be '\0'
+    buf.Format("%s", "hello");  // size=5, buffer[5]='\0'
+    buf.Format("%s", "hi");     // size=2, buffer[2] must be '\0'
 
     EXPECT_EQ(buf.Size(), 2u);
     EXPECT_STREQ(buf.CStr(), "hi");
@@ -160,8 +160,8 @@ TEST(BufferSafety, Reuse_LongToShort_NullTerminatorCorrect) {
 // Short → long (fits): null terminator moves forward.
 TEST(BufferSafety, Reuse_ShortToLong_NullTerminatorCorrect) {
     FixedFormatBuffer<16> buf;
-    buf.Format("%s", "hi");               // size=2, buffer[2]='\0'
-    buf.Format("%s", "hello");            // size=5, buffer[5] must be '\0'
+    buf.Format("%s", "hi");     // size=2, buffer[2]='\0'
+    buf.Format("%s", "hello");  // size=5, buffer[5] must be '\0'
 
     EXPECT_EQ(buf.Size(), 5u);
     EXPECT_STREQ(buf.CStr(), "hello");
@@ -171,8 +171,8 @@ TEST(BufferSafety, Reuse_ShortToLong_NullTerminatorCorrect) {
 // Long → truncated: null terminator lands exactly at CAPACITY.
 TEST(BufferSafety, Reuse_LongToTruncated_NullTerminatorAtCapacity) {
     FixedFormatBuffer<4> buf;
-    buf.Format("%s", "hi");               // size=2, buffer[2]='\0'
-    buf.Format("%s", "hello world");      // truncated to 4, buffer[4] must be '\0'
+    buf.Format("%s", "hi");           // size=2, buffer[2]='\0'
+    buf.Format("%s", "hello world");  // truncated to 4, buffer[4] must be '\0'
 
     EXPECT_EQ(buf.Size(), 4u);
     EXPECT_STREQ(buf.CStr(), "hell");
@@ -183,7 +183,7 @@ TEST(BufferSafety, Reuse_LongToTruncated_NullTerminatorAtCapacity) {
 TEST(BufferSafety, Reuse_ToEmpty_NullTerminatorAtZero) {
     FixedFormatBuffer<16> buf;
     buf.Format("%s", "hello");
-    buf.Format("%s", "");                 // size=0, buffer[0] must be '\0'
+    buf.Format("%s", "");  // size=0, buffer[0] must be '\0'
 
     EXPECT_EQ(buf.Size(), 0u);
     EXPECT_TRUE(buf.Empty());
@@ -199,19 +199,19 @@ TEST(BufferSafety, Reuse_ToEmpty_NullTerminatorAtZero) {
 
 TEST(BufferSafety, ExactFill_String_NullTerminatorAtN) {
     FixedFormatBuffer<5> buf;
-    buf.Format("%s", "hello");            // exactly 5 chars = N
+    buf.Format("%s", "hello");  // exactly 5 chars = N
     EXPECT_EQ(buf.Size(), 5u);
     EXPECT_STREQ(buf.CStr(), "hello");
-    EXPECT_EQ(buf.CStr()[5], '\0'); // buffer_[N] must be '\0'
+    EXPECT_EQ(buf.CStr()[5], '\0');  // buffer_[N] must be '\0'
 }
 
 TEST(BufferSafety, ExactFill_Int_NullTerminatorAtN) {
     FixedFormatBuffer<3> buf;
-    buf.Format("%i", 42);                 // "42" = 2 chars < 3; use 999 → 3 chars
+    buf.Format("%i", 42);  // "42" = 2 chars < 3; use 999 → 3 chars
     // First verify 2-char case (sanity)
     EXPECT_EQ(buf.CStr()[buf.Size()], '\0');
 
-    buf.Format("%i", 999);               // exactly 3 chars = N
+    buf.Format("%i", 999);  // exactly 3 chars = N
     EXPECT_EQ(buf.Size(), 3u);
     EXPECT_STREQ(buf.CStr(), "999");
     EXPECT_EQ(buf.CStr()[3], '\0');
@@ -220,7 +220,7 @@ TEST(BufferSafety, ExactFill_Int_NullTerminatorAtN) {
 TEST(BufferSafety, ExactFill_Float_NullTerminatorAtN) {
     // "1.50" = 4 chars; use FixedFormatBuffer<4>
     FixedFormatBuffer<4> buf;
-    buf.Format("%.2f", 1.5f);            // exactly 4 chars = N
+    buf.Format("%.2f", 1.5f);  // exactly 4 chars = N
     EXPECT_EQ(buf.Size(), 4u);
     EXPECT_STREQ(buf.CStr(), "1.50");
     EXPECT_EQ(buf.CStr()[4], '\0');
@@ -228,8 +228,8 @@ TEST(BufferSafety, ExactFill_Float_NullTerminatorAtN) {
 
 TEST(BufferSafety, ExactFill_AfterShorterWrite_NullTerminatorAtN) {
     FixedFormatBuffer<5> buf;
-    buf.Format("%s", "hi");              // size=2, buffer[2]='\0'
-    buf.Format("%s", "hello");           // size=5=N, buffer[5] must be '\0'
+    buf.Format("%s", "hi");     // size=2, buffer[2]='\0'
+    buf.Format("%s", "hello");  // size=5=N, buffer[5] must be '\0'
     EXPECT_EQ(buf.Size(), 5u);
     EXPECT_STREQ(buf.CStr(), "hello");
     EXPECT_EQ(buf.CStr()[5], '\0');
@@ -241,7 +241,7 @@ TEST(BufferSafety, ExactFill_AfterShorterWrite_NullTerminatorAtN) {
 
 TEST(BufferSafety, IntLongerThanBuffer_PositiveOverflow) {
     FixedFormatBuffer<3> buf;
-    buf.Format("%i", 12345);     // "12345" = 5 chars > 3
+    buf.Format("%i", 12345);  // "12345" = 5 chars > 3
     EXPECT_EQ(buf.Size(), 3u);
     EXPECT_STREQ(buf.CStr(), "123");
     EXPECT_EQ(buf.CStr()[3], '\0');
@@ -249,7 +249,7 @@ TEST(BufferSafety, IntLongerThanBuffer_PositiveOverflow) {
 
 TEST(BufferSafety, IntLongerThanBuffer_NegativeOverflow) {
     FixedFormatBuffer<3> buf;
-    buf.Format("%i", -1234);     // "-1234" = 5 chars > 3
+    buf.Format("%i", -1234);  // "-1234" = 5 chars > 3
     EXPECT_EQ(buf.Size(), 3u);
     EXPECT_STREQ(buf.CStr(), "-12");
     EXPECT_EQ(buf.CStr()[3], '\0');
@@ -257,7 +257,7 @@ TEST(BufferSafety, IntLongerThanBuffer_NegativeOverflow) {
 
 TEST(BufferSafety, IntLongerThanBuffer_OnlySignFits) {
     FixedFormatBuffer<1> buf;
-    buf.Format("%i", -99);       // "-99" = 3 chars; only '-' fits
+    buf.Format("%i", -99);  // "-99" = 3 chars; only '-' fits
     EXPECT_EQ(buf.Size(), 1u);
     EXPECT_STREQ(buf.CStr(), "-");
     EXPECT_EQ(buf.CStr()[1], '\0');
@@ -265,7 +265,7 @@ TEST(BufferSafety, IntLongerThanBuffer_OnlySignFits) {
 
 TEST(BufferSafety, IntLongerThanBuffer_NothingFits) {
     FixedFormatBuffer<0> buf;
-    buf.Format("%i", 42);        // no room at all; buffer_[0] must be '\0'
+    buf.Format("%i", 42);  // no room at all; buffer_[0] must be '\0'
     EXPECT_EQ(buf.Size(), 0u);
     EXPECT_STREQ(buf.CStr(), "");
     EXPECT_EQ(buf.CStr()[0], '\0');
@@ -277,7 +277,7 @@ TEST(BufferSafety, IntLongerThanBuffer_NothingFits) {
 
 TEST(BufferSafety, FloatLongerThanBuffer_TruncatesDigits) {
     FixedFormatBuffer<3> buf;
-    buf.Format("%.2f", 3.14f);   // "3.14" = 4 chars > 3
+    buf.Format("%.2f", 3.14f);  // "3.14" = 4 chars > 3
     EXPECT_EQ(buf.Size(), 3u);
     EXPECT_STREQ(buf.CStr(), "3.1");
     EXPECT_EQ(buf.CStr()[3], '\0');
@@ -285,7 +285,7 @@ TEST(BufferSafety, FloatLongerThanBuffer_TruncatesDigits) {
 
 TEST(BufferSafety, FloatLongerThanBuffer_TruncatesAfterDecimalPoint) {
     FixedFormatBuffer<2> buf;
-    buf.Format("%.2f", 3.14f);   // "3.14" = 4 chars; only "3." fits
+    buf.Format("%.2f", 3.14f);  // "3.14" = 4 chars; only "3." fits
     EXPECT_EQ(buf.Size(), 2u);
     EXPECT_STREQ(buf.CStr(), "3.");
     EXPECT_EQ(buf.CStr()[2], '\0');
@@ -293,7 +293,7 @@ TEST(BufferSafety, FloatLongerThanBuffer_TruncatesAfterDecimalPoint) {
 
 TEST(BufferSafety, FloatLongerThanBuffer_TruncatesBeforeDecimalPoint) {
     FixedFormatBuffer<1> buf;
-    buf.Format("%.2f", 3.14f);   // only "3" fits
+    buf.Format("%.2f", 3.14f);  // only "3" fits
     EXPECT_EQ(buf.Size(), 1u);
     EXPECT_STREQ(buf.CStr(), "3");
     EXPECT_EQ(buf.CStr()[1], '\0');
@@ -309,7 +309,7 @@ TEST(BufferSafety, FloatLongerThanBuffer_NegativeSign) {
 
 TEST(BufferSafety, IntLongerThanBuffer_OnlySignSurvives) {
     FixedFormatBuffer<1> buf;
-    buf.Format("%i", -42);       // "-42" = 3 chars; only '-' fits in N=1
+    buf.Format("%i", -42);  // "-42" = 3 chars; only '-' fits in N=1
     EXPECT_EQ(buf.Size(), 1u);
     EXPECT_STREQ(buf.CStr(), "-");
     EXPECT_EQ(buf.CStr()[1], '\0');
