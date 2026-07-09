@@ -2,6 +2,7 @@
 
 #include <cstdarg>
 #include <cstdio>
+#include <limits>
 #include <string>
 
 #include <gtest/gtest.h>
@@ -446,4 +447,26 @@ TEST(SprintfComparison, StarWidthAndPrecision) {
     FixedFormatBuffer<64> buf;
     buf.Format("%*.*f", 8, 2, 3.14159f);
     EXPECT_EQ(buf.CStr(), Ref("%*.*f", 8, 2, 3.14159f));
+}
+
+// ---------------------------------------------------------------------------
+// Float special values — nan / inf (avoid half-way values due to banker's rounding)
+// ---------------------------------------------------------------------------
+
+TEST(SprintfComparison, Float_Nan) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%f", std::numeric_limits<float>::quiet_NaN());
+    EXPECT_EQ(buf.CStr(), Ref("%f", std::numeric_limits<float>::quiet_NaN()));
+}
+
+TEST(SprintfComparison, Float_PositiveInf) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%f", std::numeric_limits<float>::infinity());
+    EXPECT_EQ(buf.CStr(), Ref("%f", std::numeric_limits<float>::infinity()));
+}
+
+TEST(SprintfComparison, Float_NegativeInf) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%f", -std::numeric_limits<float>::infinity());
+    EXPECT_EQ(buf.CStr(), Ref("%f", -std::numeric_limits<float>::infinity()));
 }

@@ -1,5 +1,7 @@
 #include "ffb/fixed_format_buffer.h"
 
+#include <limits>
+
 #include <gtest/gtest.h>
 
 using ffb::FixedFormatBuffer;
@@ -92,12 +94,88 @@ TEST(FixedFormatBuffer, FormatFloat_ZeroPrecision) {
     EXPECT_STREQ(buf.CStr(), "3");  // > 0.5, rounds up
 }
 
-TEST(FixedFormatBuffer, FormatFloat_BankersRounding) {
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision0_EvenInteger) {
     FixedFormatBuffer<64> buf;
     buf.Format("%.0f", 2.5f);
-    EXPECT_STREQ(buf.CStr(), "2");  // round-half-to-even: 2 is even
+    EXPECT_STREQ(buf.CStr(), "2");  // 2.5→2 (2 is even, tie breaks to even)
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision0_OddInteger) {
+    FixedFormatBuffer<64> buf;
     buf.Format("%.0f", 1.5f);
-    EXPECT_STREQ(buf.CStr(), "2");  // round-half-to-even: 2 is even
+    EXPECT_STREQ(buf.CStr(), "2");  // 1.5→2 (1 is odd, tie breaks up to even)
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision1_EvenLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.1f", 2.25f);  // exactly 2.25 in binary (9/4)
+    EXPECT_STREQ(buf.CStr(), "2.2");  // .25 → scaled frac=2 even, tie stays
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision1_OddLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.1f", 2.75f);  // exactly 2.75 in binary (11/4)
+    EXPECT_STREQ(buf.CStr(), "2.8");  // .75 → scaled frac=7 odd, tie rounds up to 8
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision2_EvenLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.2f", 2.125f);  // exactly 2.125 in binary (17/8)
+    EXPECT_STREQ(buf.CStr(), "2.12");  // .125 → scaled frac=12 even, tie stays
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision2_OddLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.2f", 2.375f);  // exactly 2.375 in binary (19/8)
+    EXPECT_STREQ(buf.CStr(), "2.38");  // .375 → scaled frac=37 odd, tie rounds up to 38
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision3_EvenLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.3f", 2.0625f);  // exactly 2.0625 in binary (33/16)
+    EXPECT_STREQ(buf.CStr(), "2.062");  // scaled frac=62 even, tie stays
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision3_OddLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.3f", 2.1875f);  // exactly 2.1875 in binary (35/16)
+    EXPECT_STREQ(buf.CStr(), "2.188");  // scaled frac=187 odd, tie rounds up to 188
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision4_EvenLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.4f", 2.03125f);  // exactly 2.03125 in binary (65/32)
+    EXPECT_STREQ(buf.CStr(), "2.0312");  // scaled frac=312 even, tie stays
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision4_OddLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.4f", 2.09375f);  // exactly 2.09375 in binary (67/32)
+    EXPECT_STREQ(buf.CStr(), "2.0938");  // scaled frac=937 odd, tie rounds up to 938
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision5_EvenLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.5f", 2.015625f);  // exactly 2.015625 in binary (129/64)
+    EXPECT_STREQ(buf.CStr(), "2.01562");  // scaled frac=1562 even, tie stays
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision5_OddLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.5f", 2.046875f);  // exactly 2.046875 in binary (131/64)
+    EXPECT_STREQ(buf.CStr(), "2.04688");  // scaled frac=4687 odd, tie rounds up to 4688
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision6_EvenLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.6f", 2.0078125f);  // exactly 2.0078125 in binary (257/128)
+    EXPECT_STREQ(buf.CStr(), "2.007812");  // scaled frac=7812 even, tie stays
+}
+
+TEST(FixedFormatBuffer, FormatFloat_BankersRounding_Precision6_OddLastDigit) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%.6f", 2.0234375f);  // exactly 2.0234375 in binary (259/128)
+    EXPECT_STREQ(buf.CStr(), "2.023438");  // scaled frac=23437 odd, tie rounds up to 23438
 }
 
 TEST(FixedFormatBuffer, FormatFloat_Negative) {
@@ -148,6 +226,36 @@ TEST(FixedFormatBuffer, FormatFloat_AlternateForm_ZeroPad) {
     EXPECT_STREQ(buf.CStr(), "0000042.");
 }
 
+TEST(FixedFormatBuffer, FormatFloat_Nan) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%f", std::numeric_limits<float>::quiet_NaN());
+    EXPECT_STREQ(buf.CStr(), "nan");
+}
+
+TEST(FixedFormatBuffer, FormatFloat_PositiveInf) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%f", std::numeric_limits<float>::infinity());
+    EXPECT_STREQ(buf.CStr(), "inf");
+}
+
+TEST(FixedFormatBuffer, FormatFloat_NegativeInf) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%f", -std::numeric_limits<float>::infinity());
+    EXPECT_STREQ(buf.CStr(), "-inf");
+}
+
+TEST(FixedFormatBuffer, FormatFloat_Overflow) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%f", 1e20f);
+    EXPECT_STREQ(buf.CStr(), "ovf");
+}
+
+TEST(FixedFormatBuffer, FormatFloat_NegativeOverflow) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%f", -1e20f);
+    EXPECT_STREQ(buf.CStr(), "-ovf");
+}
+
 // ---------------------------------------------------------------------------
 // Format — mixed args and literal text
 // ---------------------------------------------------------------------------
@@ -162,6 +270,18 @@ TEST(FixedFormatBuffer, FormatLiteralPercent) {
     FixedFormatBuffer<64> buf;
     buf.Format("100%%");
     EXPECT_STREQ(buf.CStr(), "100%");
+}
+
+TEST(FixedFormatBuffer, FormatPercentAtEndOfString) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("done%");
+    EXPECT_STREQ(buf.CStr(), "done");
+}
+
+TEST(FixedFormatBuffer, FormatUnknownSpecifier) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("val=%q", 42);
+    EXPECT_STREQ(buf.CStr(), "val=%q");
 }
 
 // ---------------------------------------------------------------------------
@@ -707,6 +827,13 @@ TEST(FixedFormatBuffer, FormatChar_Width_ExactFit) {
     FixedFormatBuffer<64> buf;
     buf.Format("%1c", 'Z');
     EXPECT_STREQ(buf.CStr(), "Z");
+}
+
+TEST(FixedFormatBuffer, FormatChar_NegativeChar) {
+    FixedFormatBuffer<64> buf;
+    buf.Format("%c", 0xFF);
+    EXPECT_EQ(buf.Size(), 1u);
+    EXPECT_EQ(static_cast<unsigned char>(buf.CStr()[0]), 0xFFu);
 }
 
 // ---------------------------------------------------------------------------

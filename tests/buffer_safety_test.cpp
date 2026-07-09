@@ -56,7 +56,7 @@ TEST(BufferSafety, SizeNeverExceedsCapacity) {
 TEST(BufferSafety, ViewSizeMatchesSize) {
     FixedFormatBuffer<4> buf;
     buf.Format("%s", "hello");
-    EXPECT_EQ(buf.Size(), buf.Size());
+    EXPECT_EQ(std::strlen(buf.CStr()), buf.Size());
 }
 
 TEST(BufferSafety, NullTerminatorAlwaysPresent) {
