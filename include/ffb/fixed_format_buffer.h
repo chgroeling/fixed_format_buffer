@@ -121,6 +121,32 @@ struct HighPrecisionPolicy {
     using FloatType = double;
 };
 
+/// Policy with floating-point formatting disabled.
+///
+/// The @c %f specifier is still parsed and its argument consumed (so the
+/// variadic argument list stays aligned), but it produces no output and all
+/// float-formatting code is compiled away.  Use this on targets without an
+/// FPU or where float output is undesirable to save code space.
+struct NoFloatPolicy {
+    /// Disables @c %f output; the argument is consumed but nothing is emitted.
+    static constexpr bool kSupportFloatingPointDecimals = false;
+
+    /// @copydoc StandardPolicy::kDefaultFloatPrecision
+    static constexpr std::size_t kDefaultFloatPrecision = 6U;
+
+    /// @copydoc StandardPolicy::kMaxFloatPrecision
+    static constexpr std::size_t kMaxFloatPrecision = 6U;
+
+    /// Type read from the va_list for the @c %i / @c %d specifier.
+    using IntType = int32_t;
+
+    /// Type read from the va_list for the @c %x / @c %u specifiers.
+    using UIntType = uint32_t;
+
+    /// Internal floating-point type (unused while float output is disabled).
+    using FloatType = float;
+};
+
 /// Allocation-free fixed-capacity formatting buffer.
 ///
 /// Usable on the stack, as a class member, or statically allocated.

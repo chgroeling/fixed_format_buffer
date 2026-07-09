@@ -7,6 +7,7 @@
 using ffb::StandardPolicy;
 using ffb::FixedFormatBuffer;
 using ffb::HighPrecisionPolicy;
+using ffb::NoFloatPolicy;
 
 // Local policy for tests — float disabled.
 struct NoFloat {
@@ -68,6 +69,47 @@ TEST(BufferPolicy, NoFloatAllowsIntAndString) {
     FixedFormatBuffer<64, NoFloat> buf;
     buf.Format("i=%i s=%s", 7, "hi");
     EXPECT_STREQ(buf.CStr(), "i=7 s=hi");
+}
+
+// ---------------------------------------------------------------------------
+// ffb::NoFloatPolicy (library-provided): %f consumed but not emitted
+// ---------------------------------------------------------------------------
+
+TEST(BufferPolicy, NoFloatPolicyInstantiatesLibrary) {
+    FixedFormatBuffer<64, NoFloatPolicy> buf;
+    EXPECT_TRUE(buf.Empty());
+}
+
+TEST(BufferPolicy, NoFloatPolicySkipsFloatOutput) {
+    FixedFormatBuffer<64, NoFloatPolicy> buf;
+    buf.Format("%f", 3.14f);
+    EXPECT_STREQ(buf.CStr(), "");
+}
+
+TEST(BufferPolicy, NoFloatPolicyKeepsVaListAligned) {
+    // %f is consumed silently; %s after it must still read the right arg.
+    FixedFormatBuffer<64, NoFloatPolicy> buf;
+    buf.Format("%f %s", 1.0f, "ok");
+    EXPECT_STREQ(buf.CStr(), " ok");
+}
+
+TEST(BufferPolicy, NoFloatPolicyIgnoresWidthOnFloat) {
+    // Width/precision are parsed but the %f produces no output at all.
+    FixedFormatBuffer<64, NoFloatPolicy> buf;
+    buf.Format("[%10.2f]", 3.14f);
+    EXPECT_STREQ(buf.CStr(), "[]");
+}
+
+TEST(BufferPolicy, NoFloatPolicyAllowsIntAndString) {
+    FixedFormatBuffer<64, NoFloatPolicy> buf;
+    buf.Format("i=%i s=%s", 7, "hi");
+    EXPECT_STREQ(buf.CStr(), "i=7 s=hi");
+}
+
+TEST(BufferPolicy, NoFloatPolicyFormatsIntBetweenFloats) {
+    FixedFormatBuffer<64, NoFloatPolicy> buf;
+    buf.Format("%f%d%f", 1.0f, 42, 2.0f);
+    EXPECT_STREQ(buf.CStr(), "42");
 }
 
 // ---------------------------------------------------------------------------
