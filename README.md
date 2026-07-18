@@ -101,6 +101,32 @@ it is the most comprehensive usage reference:
 - [`tests/buffer_safety_test.cpp`](tests/buffer_safety_test.cpp) — overflow behavior, null-terminator invariants, buffer reuse
 - [`tests/sprintf_comparison_test.cpp`](tests/sprintf_comparison_test.cpp) — output parity with `snprintf`
 
+## Benchmark
+
+Measured on real embedded hardware with
+[nucleo-bench](https://github.com/chgroeling/nucleo-bench).
+
+**Hardware:** ST Nucleo-64 board with an STM32F446RE MCU (Arm Cortex-M4F)
+running at 180 MHz (HSI-PLL), 512 KiB flash, 128 KiB RAM, onboard
+ST-LINK/V2-1 debug probe. Timing is captured with the cycle-accurate DWT
+cycle counter — no OS or HAL overhead — and reported over the debug link
+via ARM semihosting. Built at `-O3`.
+
+The benchmark formats this string:
+
+```cpp
+buf.Format("%0.6f:%04d:%+f:%s:%#x:%c:%%\n",
+           1.234f, 42, 3.13f, "str", 1000U, 'X');
+```
+
+| Metric                | `sprintf` (newlib-nano) | `FixedFormatBuffer` |
+| --------------------- | ----------------------: | ------------------: |
+| Added code size       |               20.18 KiB |           14.80 KiB |
+| Execution per run     |               89.80 µs  |            27.65 µs |
+
+`FixedFormatBuffer` runs the same format ~3.2× faster while adding ~5.4 KiB
+less code to the binary.
+
 ## Custom policy types
 
 The default policy uses `int32_t` / `uint32_t`. Two pre-built policies are
